@@ -1,3 +1,6 @@
+# cff-version is the version of the Citation File Format specification this file
+# conforms to -- NOT the version of ChEBI-N. That is the `version:` key below.
+# Only change this if the CFF standard itself releases a new version.
 cff-version: 1.2.0
 message: "If you use this software, please cite it using these metadata."
 type: software
