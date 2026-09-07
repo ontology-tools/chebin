@@ -17,13 +17,21 @@
 
         <p>The input molecular entities should either be in ChEBI ID format (e.g. CHEBI:16236) or as SMILES (e.g. C2H6O).</p>
         <p>A combination of both is allowed.</p>
-        <p><strong>Example submission format:</strong></p>
+        <p><strong>Example submission format:</strong>
+            <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about accepted ChEBI ID formats and separators" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" data-bs-html="true" title="Accepted formats" data-bs-content="ChEBI IDs are recognised however they are written, so a list copied from another tool does not have to be reformatted first: <code>CHEBI:16236</code>, <code>chebi:16236</code>, <code>ChEBI:16236</code>, <code>CHEBI_16236</code>, <code>CHEBI 16236</code>, <code>CHEBI ID: 16236</code>, the bare number <code>16236</code> and the full IRI all mean the same entity.<br><br>Entities can be separated by a new line, a comma, a space or a tab, mixed freely; repeated separators, trailing commas and blank lines are ignored.">
+                🛈
+            </button>
+        </p>
         <pre>
 CHEBI:31463
 CHEBI:28426
         </pre>
 
-        <p><strong>Example submission format with weights (tab or space-separated):</strong></p>
+        <p><strong>Example submission format with weights (tab or space-separated):</strong>
+            <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about submitting weights with bare ChEBI numbers" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" data-bs-html="true" title="Submitting weights" data-bs-content="Give each entity its own line: the weight is taken from the second column, so any further entries on the same line are ignored.<br><br>Since a bare number is a valid ChEBI ID, a whole number in the second column is read as another ID rather than as a weight (<code>17079 17080</code> is two entities). Write the weight as a decimal, or prefix the ID with <code>CHEBI:</code>, to submit weights.">
+                🛈
+            </button>
+        </p>
         <pre>
 CHEBI:17079	0.7665
 CHEBI:46816	0.7465

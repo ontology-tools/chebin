@@ -6,6 +6,7 @@ import time
 import pandas as pd
 from scipy.stats import fisher_exact
 
+from chebin.calculations.chebi_ids import CHEBI_IRI_PREFIX, to_chebi_iri
 from chebin.calculations.data_files import load_data_files
 from chebin.calculations.log_utils import describe
 from chebin.calculations.multiple_test_corrections import (
@@ -88,8 +89,10 @@ def normalize_id(raw_id: str) -> str:
     """
     Normalize ChEBI identifiers to full IRIs.
 
-    Converts various ChEBI ID formats (CHEBI:12345, raw IDs, or full IRIs)
-    to the standard http://purl.obolibrary.org/obo/CHEBI_XXXXX IRI format.
+    Converts every ChEBI ID format users write (CHEBI:12345, chebi:12345,
+    CHEBI ID: 12345, CHEBI_12345, the bare number, or a full IRI) to the standard
+    http://purl.obolibrary.org/obo/CHEBI_XXXXX IRI format. See
+    :mod:`chebin.calculations.chebi_ids` for the forms recognised.
 
     Args:
         raw_id: ChEBI identifier in any format (CHEBI:12345, numeric ID, or IRI).
@@ -97,17 +100,17 @@ def normalize_id(raw_id: str) -> str:
     Returns:
         str: Normalized IRI in http://purl.obolibrary.org/obo/CHEBI_XXXXX format.
     """
+    iri = to_chebi_iri(raw_id)
+    if iri is not None:
+        return iri
+    # Not a ChEBI ID in any recognised form: keep the historical behaviour of
+    # passing IRIs through untouched and putting anything else in the OBO
+    # namespace, so unrecognised input still fails as a non-matching node rather
+    # than as an exception here.
     value = raw_id.strip().replace('"', "")
     if value.startswith(("http://", "https://")):
         return value
-    # Convert CHEBI:ID to http://purl.obolibrary.org/obo/CHEBI_ID format
-    if value.startswith("CHEBI:"):
-        chebi_id = value.replace(":", "_")
-        return f"http://purl.obolibrary.org/obo/{chebi_id}"
-    if not value.startswith("http://"):
-        value = value.replace(":", "_")
-        return f"http://purl.obolibrary.org/obo/{value}"
-    return value
+    return f"{CHEBI_IRI_PREFIX}{value.replace(':', '_')}"
 
 
 def get_leaves(studyset_list, leaves_csv, class_to_leaf_map, structural_leaf_ids=None):

@@ -9,6 +9,7 @@ import uuid
 
 from flask import Flask, redirect, render_template, request, session, url_for
 
+from chebin.calculations.chebi_ids import collapse_chebi_prefixes, to_chebi_curie
 from chebin.calculations.data_files import NARROW_BACKGROUND_LEAVES
 from chebin.calculations.fishers_calculations import (
     run_enrichment_analysis,
@@ -129,6 +130,25 @@ def submission():
     return render_template("submission.html", user_study_set=None)
 
 
+def _line_weight(parts):
+    """The weight of a ``<id> <weight>`` study-set line, or None if there isn't one.
+
+    A bare number is a valid ChEBI ID, so a line of two of them (``17079 17080``,
+    or ``17079, 17080``) is two IDs rather than an ID and a weight. A second token
+    only counts as a weight when the line says so unambiguously: either the first
+    token carries a CHEBI prefix, or the weight isn't a whole number.
+    """
+    if len(parts) < 2:
+        return None
+    try:
+        weight = float(parts[1])
+    except ValueError:
+        return None
+    if parts[0].isdigit() and parts[1].isdigit():
+        return None
+    return weight
+
+
 # Used in run_analysis route to parse user input
 def parse_studyset(studyset: str):
     # Remove surrounding quotes if present
@@ -143,11 +163,19 @@ def parse_studyset(studyset: str):
         return studyset_list, weights_dict, unresolved_smiles, ambiguous_smiles_matches
 
     def normalize_id(raw_id: str) -> str:
+        """Fold the ChEBI ID spellings users type into the single CHEBI_12345 form.
+
+        The analysis functions normalize to full IRIs themselves (see
+        chebin.calculations.fishers_calculations.normalize_id), so this only has
+        to make the ID recognisable to them; anything that isn't a ChEBI ID is
+        passed through for them to reject.
+        """
+        curie = to_chebi_curie(raw_id)
+        if curie is not None:
+            return curie.replace(":", "_")
         value = raw_id.strip().replace('"', "")
         if value.startswith(("http://", "https://")):
             return value
-        if value.startswith("CHEBI:"):
-            return value.replace(":", "_")
         return value.replace(":", "_")
 
     def record_ambiguous(smiles, ambiguous_match):
@@ -170,32 +198,33 @@ def parse_studyset(studyset: str):
         if not line:
             continue
 
+        # Fold "CHEBI ID: 17079" and friends into "CHEBI:17079" first: the split
+        # below would otherwise scatter one ID across several tokens.
+        line = collapse_chebi_prefixes(line)
+
         parts = [p for p in re.split(r"[\s,]+", line) if p]
 
-        if len(parts) >= 2:
-            try:
-                weight = float(parts[1])
-                # Check if first part is SMILES
-                if is_smiles(parts[0]):
-                    chebi_ids, was_resolved, ambiguous_match = convert_smiles_to_chebi(
-                        parts[0],
-                        use_parents=use_parents,
-                    )
-                    if not was_resolved:
-                        unresolved_smiles.append(parts[0])
-                    record_ambiguous(parts[0], ambiguous_match)
-                    # Apply the same weight to all resulting ChEBI IDs
-                    for chebi_id in chebi_ids:
-                        class_id = normalize_id(chebi_id)
-                        studyset_list.append(class_id)
-                        weights_dict[class_id] = weight
-                else:
-                    class_id = normalize_id(parts[0])
+        weight = _line_weight(parts)
+        if weight is not None:
+            # Check if first part is SMILES
+            if is_smiles(parts[0]):
+                chebi_ids, was_resolved, ambiguous_match = convert_smiles_to_chebi(
+                    parts[0],
+                    use_parents=use_parents,
+                )
+                if not was_resolved:
+                    unresolved_smiles.append(parts[0])
+                record_ambiguous(parts[0], ambiguous_match)
+                # Apply the same weight to all resulting ChEBI IDs
+                for chebi_id in chebi_ids:
+                    class_id = normalize_id(chebi_id)
                     studyset_list.append(class_id)
                     weights_dict[class_id] = weight
-                continue
-            except ValueError:
-                pass
+            else:
+                class_id = normalize_id(parts[0])
+                studyset_list.append(class_id)
+                weights_dict[class_id] = weight
+            continue
 
         # Fallback: treat all parts as IDs without weights
         for part in parts:

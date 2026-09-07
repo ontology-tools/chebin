@@ -10,6 +10,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- ChEBI IDs are accepted in every format users write them in --- `CHEBI:17079`,
+  `chebi:17079`, `ChEBI:17079`, `CHEBI_17079`, `CHEBI 17079`, `CHEBI ID: 17079`,
+  the bare number `17079`, and full IRIs --- rather than `CHEBI:17079` alone.
+  Recognition lives in one place (`chebin.calculations.chebi_ids`), shared by the
+  website's study-set parser, `normalize_id()` and the SMILES/ChEBI-ID check
 - Comprehensive type hints for all core calculation functions (Python 3.12+
   syntax)
 - 173+ unit tests covering enrichment analysis, visualization, and edge cases
@@ -32,6 +37,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Study sets written with an unexpected ChEBI ID format no longer run through as
+  entities that match nothing, which produced an empty result with no
+  explanation. A bare-number study set (`17079, 17080`) is also no longer read as
+  one ID plus a weight
 - Type checking errors (pyright) for all calculation functions
 - Linting issues (ruff) in test files
 - Return type mismatches in weighted enrichment functions

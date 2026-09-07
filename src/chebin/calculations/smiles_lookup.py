@@ -15,6 +15,7 @@ import requests
 from rdkit import Chem  # type: ignore
 from rdkit.Chem import inchi  # type: ignore
 
+from chebin.calculations.chebi_ids import looks_like_chebi_id, to_chebi_curie
 from chebin.calculations.log_utils import preview
 from chebin.config import require_data_path
 
@@ -37,17 +38,9 @@ def _normalize_chebi_id(raw_value):
     if not value:
         return ""
 
-    if value.startswith("http://purl.obolibrary.org/obo/CHEBI_"):
-        value = value.rsplit("/", 1)[-1]
-
-    if value.startswith("CHEBI:"):
-        return value.replace(":", "_", 1)
-
-    if value.startswith("CHEBI_"):
-        return value
-
-    if value.isdigit():
-        return f"CHEBI_{value}"
+    curie = to_chebi_curie(value)
+    if curie is not None:
+        return curie.replace(":", "_", 1)
 
     return value
 
@@ -335,12 +328,16 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
 def is_smiles(value: str) -> bool:
     """Heuristic: does this string look like a SMILES rather than a ChEBI ID?
 
-    Not a SMILES if it's already a ChEBI ID (``CHEBI:12345``/``CHEBI_12345``) or
-    IRI; otherwise a SMILES typically contains lowercase letters, parentheses, or
-    other structural characters a bare ChEBI ID never does.
+    Not a SMILES if it's already a ChEBI ID in any of the forms
+    :mod:`chebin.calculations.chebi_ids` recognises (``CHEBI:12345``,
+    ``chebi:12345``, ``CHEBI_12345``, the bare number, ...) or an IRI; otherwise a
+    SMILES typically contains lowercase letters, parentheses, or other structural
+    characters a bare ChEBI ID never does. The ChEBI check has to come first: the
+    letters in ``chebi`` are themselves SMILES atoms, so a lowercased prefix would
+    otherwise be read as a structure.
     """
     value = value.strip()
-    if value.startswith(("CHEBI:", "CHEBI_", "http://", "https://")):
+    if looks_like_chebi_id(value) or value.startswith(("http://", "https://")):
         return False
     smiles_chars = set("cCnNoOpPsSFfIiBbr[]()=#@+-\\/")
     return any(c in smiles_chars for c in value)
