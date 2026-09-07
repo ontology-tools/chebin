@@ -15,7 +15,7 @@ keywords:
   - "Fisher's exact test"
   - "weighted enrichment"
 version: "1.0.1"
-date-released: 2026-09-05
+date-released: 2026-09-07
 contact:
   - family-names: "Carlsson"
     given-names: "Miranda"
@@ -26,6 +26,6 @@ preferred-citation:
       given-names: "Miranda"
   title: "ChEBI-N: Chemical Enrichment Analysis Tool"
   version: "1.0.1"
-  date-released: 2026-09-05
+  date-released: 2026-09-07
   url: "https://github.com/ontology-tools/chebin"
   repository-code: "https://github.com/ontology-tools/chebin"
