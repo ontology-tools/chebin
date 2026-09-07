@@ -320,7 +320,7 @@ wheels = [
 
 [[package]]
 name = "chebin"
-version = "0.0.1"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "flask" },

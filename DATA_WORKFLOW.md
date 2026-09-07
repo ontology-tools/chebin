@@ -146,29 +146,29 @@ Classes are sorted into structural vs. functional (role) sets by
 `identify_structural_vs_functional()` in
 `src/chebin/preparing_data/pruning_split_up_structure.py`, which walks the
 descendants of the structural and role root classes and returns three sets of
-class IRIs:
-`structural_classes`, `functional_classes`, and `unknown_classes` (classes under
-neither root, kept only for troubleshooting). These three sets feed the
-`Classification` column of the CSV created in step 4 below.
+class IRIs: `structural_classes`, `functional_classes`, and `unknown_classes`
+(classes under neither root, kept only for troubleshooting). These three sets
+feed the `Classification` column of the CSV created in step 4 below.
 
 There are two ways to obtain these sets, and
 `src/chebin/preparing_data/create_files.py` uses the fast one:
 
-- **Automated (fast) path --- used by `src/chebin/preparing_data/create_files.py`:**
+- **Automated (fast) path --- used by
+  `src/chebin/preparing_data/create_files.py`:**
   `identify_structural_vs_functional()` is called with the already-in-memory
   flattened subclass map (`data/chebi_subclass_map.json`, built in step 2), so
   descendants are found via plain dict lookups instead of per-node ontology API
   calls. The resulting class sets are passed straight into
   `save_leaf_classes_with_smiles()` (step 4) without ever touching disk --- no
   OWL files are written for this step.
-- **Manual path --- `src/chebin/preparing_data/pruning_split_up_structure.py`, task
-  *"split_structural_functional"*:** Run standalone, the function is called
+- **Manual path --- `src/chebin/preparing_data/pruning_split_up_structure.py`,
+  task *"split_structural_functional"*:** Run standalone, the function is called
   without the subclass map, so it falls back to the slower ontology API. The
   three class sets are then written out as separate OWL files via
   `split_owl_by_type()`, creating `_structural.owl`, `_functional.owl`, and
   `_unknown.owl` versions of the previously filtered ontology (e.g.
-  `data/filtered_chebi_no_leaves_with_smiles_no_deprecated_structural.owl`).
-  The *"save_removed_leaf_classes"* task (step 4) in
+  `data/filtered_chebi_no_leaves_with_smiles_no_deprecated_structural.owl`). The
+  *"save_removed_leaf_classes"* task (step 4) in
   `src/chebin/preparing_data/pruning_smiles.py` can then load these OWL files
   back in to recover the same three class sets, if run outside of
   `src/chebin/preparing_data/create_files.py`.
@@ -211,16 +211,16 @@ itself.
 
 Enrichment calculations can be run in
 `src/chebin/calculations/fishers_calculations.py`, but this is most easily done
-via the web application. Either use the website link
-(easiest since no preparation steps to obtain all the necessary files are
-needed) or run `website/app.py` locally.
+via the web application. Either use the website link (easiest since no
+preparation steps to obtain all the necessary files are needed) or run
+`website/app.py` locally.
 
 ## 6. Needed for human dataset
 
 1. Download LOTUS compound--taxon data from Wikidata via the QLever SPARQL
    endpoint using `src/chebin/preparing_data/wikidata/get_lotus.py`. This is run
-   automatically by `src/chebin/preparing_data/create_files.py`, but can also be run
-   standalone:
+   automatically by `src/chebin/preparing_data/create_files.py`, but can also be
+   run standalone:
 
    ```bash
    python -m chebin.preparing_data.wikidata.get_lotus
@@ -254,9 +254,9 @@ needed) or run `website/app.py` locally.
    Output: `data/hmdb_metabolites_extract_quantified_detected.tsv`
 
 5. Find missing ChEBI IDs using `run_find_missing_chebis(source)` in
-   `src/chebin/preparing_data/wikidata/find_missing_chebis.py` (also runnable via
-   `jobs/run_find_missing_chebis.sh [source]`). The `source` argument must be
-   one of the presets in `SOURCE_PRESETS`: `"lotus_hs"`, `"lotus_at"`, or
+   `src/chebin/preparing_data/wikidata/find_missing_chebis.py` (also runnable
+   via `jobs/run_find_missing_chebis.sh [source]`). The `source` argument must
+   be one of the presets in `SOURCE_PRESETS`: `"lotus_hs"`, `"lotus_at"`, or
    `"hmdb"`.
 
    ChEBI ID matching is attempted in this order:
@@ -310,15 +310,15 @@ are skipped entirely.
 
 3. Build the leaf classes with `gather_narrow_leaves()` in
    `src/chebin/preparing_data/wikidata/narrow_background_fishers.py`, passing
-   the file from step 2 as `compounds_tsv` and `taxon_label="arabidopsis_thaliana"`.
+   the file from step 2 as `compounds_tsv` and
+   `taxon_label="arabidopsis_thaliana"`.
 
 Output: `data/arabidopsis_thaliana_leaves.json`
 
 ## Endogenous human background (Recon3D)
 
-This path is independent of step 6 and the Wikidata/HMDB workflow above; it
-only needs the files from steps 1--5
-(`data/removed_leaf_classes_with_smiles.csv` and
+This path is independent of step 6 and the Wikidata/HMDB workflow above; it only
+needs the files from steps 1--5 (`data/removed_leaf_classes_with_smiles.csv` and
 `data/class_to_leaf_descendants_map.json`).
 
 Run `src/chebin/preparing_data/BiGG/get_model.py`. This:

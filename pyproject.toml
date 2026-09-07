@@ -36,10 +36,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://chebin.hastingslab.org/"
-Repository = "https://github.com/ontology-tools/chebin"
-Issues = "https://github.com/ontology-tools/chebin/issues"
 Changelog = "https://github.com/ontology-tools/chebin/blob/main/CHANGELOG.md"
+Homepage = "https://chebin.hastingslab.org/"
+Issues = "https://github.com/ontology-tools/chebin/issues"
+Repository = "https://github.com/ontology-tools/chebin"
 
 [dependency-groups]
 dev = [
@@ -55,7 +55,13 @@ build-backend = "uv_build"
 
 [tool.deptry]
 ignore_notebooks = true
-known_first_party = ["calculations", "old_scripts", "preparing_data", "website"]
+known_first_party = [
+  "chebin",
+  "calculations",
+  "old_scripts",
+  "preparing_data",
+  "website"
+]
 
 [tool.deptry.package_module_name_map]
 py-horned-owl = ["pyhornedowl"]
