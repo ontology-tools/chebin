@@ -169,9 +169,12 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
     lookup), fall back to a remote classification call and use its direct
     parent ChEBI IDs instead of leaving the SMILES unresolved.
     """
-    local_smiles_to_chebi, local_inchikey_to_chebi, local_smiles_collisions, local_inchikey_collisions = (
-        _get_local_maps()
-    )
+    (
+        local_smiles_to_chebi,
+        local_inchikey_to_chebi,
+        local_smiles_collisions,
+        local_inchikey_collisions,
+    ) = _get_local_maps()
 
     chebi_ids = []
     was_resolved = False

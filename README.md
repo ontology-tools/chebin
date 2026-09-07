@@ -121,10 +121,9 @@ Wherever these functions take a ChEBI ID --- in `studyset_list`, as a
 `weights_dict` key, or as a seed elsewhere --- it is recognised however it is
 written: `CHEBI:17079`, `chebi:17079`, `ChEBI:17079`, `CHEBI_17079`,
 `CHEBI 17079`, `CHEBI ID: 17079`, the bare number `17079` and the full IRI
-`http://purl.obolibrary.org/obo/CHEBI_17079` all mean the same entity.
-Note that each ID
-must be its own list element or dict key: `"17079 17080"` is one (meaningless)
-entry rather than two entities.
+`http://purl.obolibrary.org/obo/CHEBI_17079` all mean the same entity. Note that
+each ID must be its own list element or dict key: `"17079 17080"` is one
+(meaningless) entry rather than two entities.
 
 Four independent choices combine to give the full name:
 
@@ -342,11 +341,11 @@ On the home page, you can enter your study set as ChEBI IDs (one per line) or
 SMILES. You can optionally provide weights for each compound (tab- or
 space-separated).
 
-Entities can be separated by a new line, a comma, a space or a tab, and these can
-be mixed freely (`CHEBI:17079, CHEBI:46816` on one line and `CHEBI:31463` on the
-next is three entities). When submitting weights, give each entity
-its own line: the weight is taken from the second column, so any further entries
-on the same line are ignored.
+Entities can be separated by a new line, a comma, a space or a tab, and these
+can be mixed freely (`CHEBI:17079, CHEBI:46816` on one line and `CHEBI:31463` on
+the next is three entities). When submitting weights, give each entity its own
+line: the weight is taken from the second column, so any further entries on the
+same line are ignored.
 
 ChEBI IDs are recognised however they are written, so a list copied from another
 tool does not have to be reformatted first: `CHEBI:17079`, `chebi:17079`,

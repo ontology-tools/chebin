@@ -1219,15 +1219,20 @@ def run_weighted_enrichment_analysis_from_smiles(
         tuple: (results_dict, pruned_graph, smiles_diagnostics) where
             smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = smiles_weights_to_chebi_weights(
-        smiles_weights,
-        use_parents=use_parents,
+    weights_dict, unresolved_smiles, ambiguous_matches = (
+        smiles_weights_to_chebi_weights(
+            smiles_weights,
+            use_parents=use_parents,
+        )
     )
     results, pruned_G = run_weighted_enrichment_analysis(weights_dict, **kwargs)
     return (
         results,
         pruned_G,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 
@@ -1435,9 +1440,11 @@ def run_weighted_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
         tuple: (results_dict, graph, smiles_diagnostics) where smiles_diagnostics
             is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = smiles_weights_to_chebi_weights(
-        smiles_weights,
-        use_parents=use_parents,
+    weights_dict, unresolved_smiles, ambiguous_matches = (
+        smiles_weights_to_chebi_weights(
+            smiles_weights,
+            use_parents=use_parents,
+        )
     )
     results, G = run_weighted_enrichment_analysis_plain_enrich_pruning_strategy(
         weights_dict,
@@ -1446,7 +1453,10 @@ def run_weighted_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
     return (
         results,
         G,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 
@@ -1673,9 +1683,11 @@ def run_weighted_narrow_background_enrichment_analysis_from_smiles(
             parents_to_expand_background, smiles_diagnostics) where
             smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = smiles_weights_to_chebi_weights(
-        smiles_weights,
-        use_parents=use_parents,
+    weights_dict, unresolved_smiles, ambiguous_matches = (
+        smiles_weights_to_chebi_weights(
+            smiles_weights,
+            use_parents=use_parents,
+        )
     )
     (
         results,
@@ -1688,7 +1700,10 @@ def run_weighted_narrow_background_enrichment_analysis_from_smiles(
         pruned_G,
         leaves_to_expand_background,
         parents_to_expand_background,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 
@@ -1901,9 +1916,11 @@ def run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_stra
             parents_to_expand_background, smiles_diagnostics) where
             smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = smiles_weights_to_chebi_weights(
-        smiles_weights,
-        use_parents=use_parents,
+    weights_dict, unresolved_smiles, ambiguous_matches = (
+        smiles_weights_to_chebi_weights(
+            smiles_weights,
+            use_parents=use_parents,
+        )
     )
     (
         results,
@@ -1919,5 +1936,8 @@ def run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_stra
         G,
         leaves_to_expand_background,
         parents_to_expand_background,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )

@@ -406,7 +406,9 @@ def print_enrichment_results(enrichment_results):
 
 def write_enrichment_csv(enrichment_results: dict, csv_path: str) -> None:
     df = pd.DataFrame(list(enrichment_results.values()))
-    columns = [col for col in ["class", "p_value", "p_value_corrected"] if col in df.columns]
+    columns = [
+        col for col in ["class", "p_value", "p_value_corrected"] if col in df.columns
+    ]
     df[columns].to_csv(csv_path, index=False)
 
 
@@ -439,8 +441,6 @@ def run_enrichment_analysis(
     print_results: bool = False,
     csv_output_path: str | None = None,
 ) -> tuple[dict, object]:
-
-
     """
     Run enrichment analysis with optional pruning and multiple test correction.
 
@@ -719,7 +719,10 @@ def run_enrichment_analysis_from_smiles(
     return (
         results,
         pruned_G,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 
@@ -743,7 +746,6 @@ def run_enrichment_analysis_plain_enrich_pruning_strategy(
     print_results: bool = False,
     csv_output_path: str | None = None,
 ) -> tuple[dict, object]:
-
     """
     Run enrichment analysis with the Plain Enrichment Pruning Strategy.
     This strategy first applies the High Value Branch Pruner, the Linear Branch Collapser Pruner, and the Root Children Pruner in the pre-loop phase.
@@ -978,7 +980,10 @@ def run_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
     return (
         results,
         G,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 
