@@ -66,6 +66,12 @@ known_first_party = [
 [tool.deptry.package_module_name_map]
 py-horned-owl = ["pyhornedowl"]
 
+[tool.ty.src]
+# Notebooks are development scratch, not part of the library (deptry skips them
+# too, and they are excluded from the wheel below). They import plotting
+# libraries that are deliberately not project dependencies.
+exclude = ["**/*.ipynb"]
+
 [tool.typos.default.extend-words]
 # "cose" is the Cytoscape.js Compound Spring Embedder layout, not a typo of
 # "case". Without this the typos hook rewrites it and breaks graph rendering
