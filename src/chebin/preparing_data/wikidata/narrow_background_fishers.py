@@ -854,7 +854,10 @@ def run_narrow_background_enrichment_analysis_from_smiles(
         pruned_G,
         leaves_to_expand_background,
         parents_to_expand_background,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 
@@ -1138,7 +1141,10 @@ def run_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy_from
         G,
         leaves_to_expand_background,
         parents_to_expand_background,
-        {"unresolved_smiles": unresolved_smiles, "ambiguous_matches": ambiguous_matches},
+        {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_matches": ambiguous_matches,
+        },
     )
 
 

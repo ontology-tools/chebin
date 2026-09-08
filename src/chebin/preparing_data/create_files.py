@@ -254,6 +254,7 @@ def cleanup_old_data_folders(old_data_folder="data", max_folders=3):
         print(f"Deleting old data folder: {folder}")
         shutil.rmtree(folder)
 
+
 def create_all_files_with_backup(data_folder="data"):
     """
     Create all derived data files for the project, with a backup of the old data folder. Observe that this function can take up to an hour to run.
@@ -288,14 +289,17 @@ def create_all_files_with_backup(data_folder="data"):
 
     ### Finalize folder structure: rename old data and move data_new to data
     print("Finalizing folder structure...")
-    finalize_folder_structure(new_data_folder=data_folder_new, old_data_folder=data_folder)
+    finalize_folder_structure(
+        new_data_folder=data_folder_new,
+        old_data_folder=data_folder,
+    )
 
     ### Clean up old data folders, keeping only the most recent ones
     print("Cleaning up old data folders...")
     cleanup_old_data_folders(old_data_folder=data_folder, max_folders=3)
 
-def create_all_files(data_folder="data"):
 
+def create_all_files(data_folder="data"):
     """
     Create all derived data files for the project. Observe that this function can take up to an hour to run.
     Args:
@@ -338,7 +342,9 @@ def create_all_files(data_folder="data"):
         print(f"Using HMDB XML at {hmdb_xml_file}")
         # Found, but not where the rest of the inputs live. Suggest rather than move:
         # it is the user's file and it is large, so relocating it silently would be rude.
-        if os.path.dirname(os.path.abspath(hmdb_xml_file)) == os.path.abspath(data_folder):
+        if os.path.dirname(os.path.abspath(hmdb_xml_file)) == os.path.abspath(
+            data_folder,
+        ):
             print(
                 f"  (tip: moving it into '{source_dir}' keeps the data folder itself to "
                 f"just the files the calculations need -- both locations work)",
@@ -357,42 +363,42 @@ def create_all_files(data_folder="data"):
 
     # --- intermediates: written by one stage, consumed by the next, then dead
     subclass_map_file = f"{intermediate_dir}/chebi_subclass_map.json"
-    roles_map_json = (
-        f"{intermediate_dir}/class_to_direct_roles_map.json"  # output file for roles map
-    )
+    roles_map_json = f"{intermediate_dir}/class_to_direct_roles_map.json"  # output file for roles map
     leaves_to_all_roles_json = f"{intermediate_dir}/removed_leaf_classes_to_ALL_roles_map.json"  # output file for leaves to all roles map
 
     lotus_hs_chebi_tsv = f"{intermediate_dir}/lotus_homo_sapiens_with_chebi_ids.tsv"
-    lotus_at_chebi_tsv = f"{intermediate_dir}/lotus_arabidopsis_thaliana_with_chebi_ids.tsv"
+    lotus_at_chebi_tsv = (
+        f"{intermediate_dir}/lotus_arabidopsis_thaliana_with_chebi_ids.tsv"
+    )
     lotus_hs_updated_tsv = (
         f"{intermediate_dir}/lotus_homo_sapiens_with_chebi_ids_updatedchebis.tsv"
     )
-    lotus_at_updated_tsv = (
-        f"{intermediate_dir}/lotus_arabidopsis_thaliana_with_chebi_ids_updatedchebis.tsv"
-    )
+    lotus_at_updated_tsv = f"{intermediate_dir}/lotus_arabidopsis_thaliana_with_chebi_ids_updatedchebis.tsv"
 
     hmdb_extract_tsv = f"{intermediate_dir}/hmdb_metabolites_extract.tsv"
-    hmdb_filtered_tsv = f"{intermediate_dir}/hmdb_metabolites_extract_quantified_detected.tsv"
-    hmdb_updated_tsv = (
-        f"{intermediate_dir}/hmdb_metabolites_extract_quantified_detected_updatedchebis.tsv"
+    hmdb_filtered_tsv = (
+        f"{intermediate_dir}/hmdb_metabolites_extract_quantified_detected.tsv"
     )
+    hmdb_updated_tsv = f"{intermediate_dir}/hmdb_metabolites_extract_quantified_detected_updatedchebis.tsv"
     combined_human_tsv = f"{intermediate_dir}/combined_hmdb_wikidata.tsv"
 
     # --- runtime files: everything below stays at the top level of the data folder,
     # --- because these are what the enrichment analyses and the website actually read.
-    leaf_parents_map_file = f"{data_folder}/removed_leaf_classes_to_ALL_parents_map.json"
+    leaf_parents_map_file = (
+        f"{data_folder}/removed_leaf_classes_to_ALL_parents_map.json"
+    )
     removed_leaf_classes_file = f"{data_folder}/removed_leaf_classes_with_smiles.csv"
-    leaves_to_all_parents_json = f"{data_folder}/removed_leaf_classes_to_ALL_parents_map.json"
+    leaves_to_all_parents_json = (
+        f"{data_folder}/removed_leaf_classes_to_ALL_parents_map.json"
+    )
     parent_map_json = f"{data_folder}/chebi_parent_map.json"
-    roles_to_all_leaves_json = (
-        f"{data_folder}/roles_to_leaves_map.json"  # output file for roles to all leaves map
-    )
-    class_to_all_roles_json = (
-        f"{data_folder}/class_to_all_roles_map.json"  # output file for class to all roles map
-    )
+    roles_to_all_leaves_json = f"{data_folder}/roles_to_leaves_map.json"  # output file for roles to all leaves map
+    class_to_all_roles_json = f"{data_folder}/class_to_all_roles_map.json"  # output file for class to all roles map
     id_to_name_map_json = f"{data_folder}/chebi_id_to_name_map.json"
 
-    leaf_to_ancestors_file = f"{data_folder}/removed_leaf_classes_to_ALL_parents_map.json"
+    leaf_to_ancestors_file = (
+        f"{data_folder}/removed_leaf_classes_to_ALL_parents_map.json"
+    )
     class_to_leaf_output_file = f"{data_folder}/class_to_leaf_descendants_map.json"
 
     # Lookup tables used to match compounds to ChEBI IDs. These must be passed
@@ -454,7 +460,7 @@ def create_all_files(data_folder="data"):
     ### then create a map of all leaf classes to all their "has_role" connections (not just direct ones) and save as JSON
     ### and the reverse map of all roles to all leaf classes that have that role (directly or indirectly) and save as JSON
     print("Building roles maps...")
-    roles_map = _run_stage(
+    _run_stage(
         "find_has_role_connections_from_owl",
         stage_timings,
         find_has_role_connections_from_owl,
@@ -533,7 +539,6 @@ def create_all_files(data_folder="data"):
         leaf_to_ancestors_file,
         class_to_leaf_output_file,
     )
-
 
     ### Convert SMILES to InChIKeys for the removed leaf classes (needed by find_missing_chebis and the website)
     print("Generating InChIKeys for removed leaf classes...")
@@ -711,6 +716,7 @@ def create_all_files(data_folder="data"):
     print(
         f"Total execution time: {elapsed_time:.2f} seconds or {elapsed_time / 60:.2f} minutes or {elapsed_time / 3600:.2f} hours",
     )
+
 
 if __name__ == "__main__":
     create_all_files_with_backup()

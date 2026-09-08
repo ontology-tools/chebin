@@ -87,7 +87,10 @@ def export_graph_html(
     )
 
     page = _read_asset(_TEMPLATE, "The standalone graph template")
-    page = page.replace(_CYTOSCAPE_TOKEN, _read_asset(_CYTOSCAPE_JS, "The vendored Cytoscape bundle"))
+    page = page.replace(
+        _CYTOSCAPE_TOKEN,
+        _read_asset(_CYTOSCAPE_JS, "The vendored Cytoscape bundle"),
+    )
     page = page.replace(_DATA_TOKEN, _embed_json(data))
 
     output_path = Path(output_file)

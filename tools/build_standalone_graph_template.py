@@ -296,9 +296,15 @@ def extract_js(html):
 
 
 def apply_substitutions(js):
-    for old, new in [(FETCH_OLD, FETCH_NEW), (TOOLTIP_OLD, TOOLTIP_NEW), *PDF_SUBSTITUTIONS]:
+    for old, new in [
+        (FETCH_OLD, FETCH_NEW),
+        (TOOLTIP_OLD, TOOLTIP_NEW),
+        *PDF_SUBSTITUTIONS,
+    ]:
         if js.count(old) != 1:
-            fail(f"expected exactly 1 occurrence of:\n{old[:160]}\n(found {js.count(old)})")
+            fail(
+                f"expected exactly 1 occurrence of:\n{old[:160]}\n(found {js.count(old)})",
+            )
         js = js.replace(old, new)
     return js
 
@@ -314,7 +320,9 @@ def main():
 
     for banned in ("{{", "{%", "url_for", "qtip", "jspdf", "jsPDF"):
         if banned in js or banned in body:
-            fail(f"'{banned}' still present in the lifted markup -- it would not work offline")
+            fail(
+                f"'{banned}' still present in the lifted markup -- it would not work offline",
+            )
 
     page = f"""<!DOCTYPE html>
 <!--
