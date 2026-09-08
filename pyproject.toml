@@ -78,6 +78,14 @@ exclude = ["**/*.ipynb"]
 # in website/templates/graph.html (reverted before in 6f97f56 and 24db0a0).
 cose = "cose"
 
+[tool.typos.files]
+# cytoscape.min.js is vendored upstream code, not ours to spell-check. Beyond
+# diverging it from upstream, "correcting" it breaks the library: typos renames
+# the minified identifiers pn -> on and Pn -> On, and the bundle already defines
+# a different on() and On(), so the two collide. bgActivePosistion (20x) is a
+# real Cytoscape.js style property whose name is misspelled upstream.
+extend-exclude = ["src/chebin/static/cytoscape.min.js"]
+
 [tool.uv]
 package = true
 
