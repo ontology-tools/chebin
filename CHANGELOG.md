@@ -29,6 +29,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `calculate_weighted_p_value` annotates its `saddler` parameter as `_SaddleSum`
+  instead of `object`, so the `saddler.pvalue()` call is type checked rather
+  than silenced by a blanket `# type: ignore`
+- Dropped a redundant truthiness check on `ET.ParseError.position` in the HMDB
+  extractor. A non-empty tuple is always truthy, so the guard never varied
 - Fixed return type annotations for functions returning 4-tuples
 - Improved website enrichment endpoint to handle classification parameter
   properly
@@ -41,6 +46,15 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   entities that match nothing, which produced an empty result with no
   explanation. A bare-number study set (`17079, 17080`) is also no longer read
   as one ID plus a weight
+- CI type-check failures that could not be reproduced locally. The `ty-check`
+  hook in `prek.toml` left its dependencies unpinned, so CI resolved the latest
+  `ty` on every run while the local hook environment stayed cached at an older
+  one --- CI failed on diagnostics a local `prek` run reported as clean. `ty`
+  and the libraries it reads as type information are now pinned to the versions
+  in `uv.lock`, so local and CI resolve identically
+- `rdkit` added to the `ty-check` hook's dependencies. The hook resolves imports
+  from its own environment rather than the project `.venv`, so without it every
+  `rdkit` import was an unresolved-import masked by a blanket `# type: ignore`
 - Type checking errors (pyright) for all calculation functions
 - Linting issues (ruff) in test files
 - Return type mismatches in weighted enrichment functions

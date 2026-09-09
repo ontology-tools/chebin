@@ -496,7 +496,7 @@ def _print_non_finite_pvalue_diagnostics(enrichment_results, stage):
 
 
 def calculate_weighted_p_value(
-    saddler: object,
+    saddler: _SaddleSum,
     term_leaves: set,
     studyset_leaves_set: set,
     weights_with_leaves: dict,
@@ -534,7 +534,7 @@ def calculate_weighted_p_value(
         return 0.0, 0, 1.0
 
     score = sum(weights_with_leaves[leaf] for leaf in annotated)
-    p_value = saddler.pvalue(score, n_ss_annotated)  # type: ignore
+    p_value = saddler.pvalue(score, n_ss_annotated)
     return score, n_ss_annotated, p_value
 
 

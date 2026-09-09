@@ -7,7 +7,7 @@ import time
 from datetime import UTC
 from pathlib import Path
 
-from rdkit import RDLogger  # type: ignore
+from rdkit import RDLogger
 
 from chebin.calculations.pre_fishers_calculations import build_class_to_leaf_map
 from chebin.calculations.prepare_role_calculations import (
@@ -311,7 +311,9 @@ def create_all_files(data_folder="data"):
     # already handles by falling back or skipping. Left on, they produced ~11 MB
     # of stderr per run -- 30x the size of the actual log. Scoped to this
     # function so importing chebin elsewhere (the website) keeps the warnings.
-    RDLogger.DisableLog("rdApp.*")
+    # RDLogger re-exports its members from the compiled rdBase module, so ty
+    # cannot see DisableLog statically even with rdkit installed.
+    RDLogger.DisableLog("rdApp.*")  # ty: ignore[unresolved-attribute]
 
     stage_timings = []
     start_time = time.time()

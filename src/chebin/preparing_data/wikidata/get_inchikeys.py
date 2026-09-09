@@ -1,6 +1,6 @@
 import pandas as pd
-from rdkit import Chem  # type: ignore
-from rdkit.Chem.inchi import InchiToInchiKey, MolToInchi  # type: ignore
+from rdkit import Chem
+from rdkit.Chem.inchi import InchiToInchiKey, MolToInchi
 
 
 def smiles_to_inchikey(smiles):

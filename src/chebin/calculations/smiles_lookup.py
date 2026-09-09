@@ -12,8 +12,8 @@ import csv
 import re
 
 import requests
-from rdkit import Chem  # type: ignore
-from rdkit.Chem import inchi  # type: ignore
+from rdkit import Chem
+from rdkit.Chem import inchi
 
 from chebin.calculations.chebi_ids import looks_like_chebi_id, to_chebi_curie
 from chebin.calculations.log_utils import preview

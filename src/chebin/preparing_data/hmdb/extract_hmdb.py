@@ -43,7 +43,7 @@ def _iter_metabolites(
         if allow_truncated:
             line = "?"
             column = "?"
-            if hasattr(error, "position") and error.position:
+            if hasattr(error, "position"):
                 line = str(error.position[0])
                 column = str(error.position[1])
             print(
@@ -154,7 +154,7 @@ def _format_parse_error(xml_file: str, error: ET.ParseError) -> str:
 
     line = "?"
     column = "?"
-    if hasattr(error, "position") and error.position:
+    if hasattr(error, "position"):
         line = str(error.position[0])
         column = str(error.position[1])
 

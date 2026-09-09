@@ -44,6 +44,9 @@ hooks = [
   {
     id = "deptry",
     language = "python",
+    # Unpinned on purpose: prek installs the repo clone at `rev` above, and that
+    # local path takes precedence, so this resolves to 0.25.1 already. Adding an
+    # explicit `==0.25.1` here makes the resolve unsatisfiable.
     additional_dependencies = ["deptry"],
     exclude = '^(?!.*\.py$).*$'
   }
@@ -106,16 +109,24 @@ hooks = [
     entry = "ty check src/chebin website",
     pass_filenames = false,
     exclude = '^(?!.*\.py$).*$',
+    # All pinned deliberately. This hook has no `rev` to pin it, so unpinned
+    # entries resolve to latest on every CI run while the local hook env stays
+    # cached -- CI fails on diagnostics that cannot be reproduced locally.
+    # The libraries below are type information, not just imports: new stubs
+    # change inferred types and surface new diagnostics, so they pin too.
+    # Versions match uv.lock, so ty sees what the code actually runs against.
+    # Bump with `prek auto-update` (revs) plus a manual pass over this list.
     additional_dependencies = [
-      "ty",
-      "flask",
-      "networkx",
-      "numpy",
-      "pandas",
-      "pytest",
-      "requests",
-      "scipy",
-      "py-horned-owl"
+      "ty==0.0.79",
+      "flask==3.1.3",
+      "networkx==3.6.1",
+      "numpy==2.5.2",
+      "pandas==3.0.5",
+      "pytest==9.1.1",
+      "requests==2.34.2",
+      "scipy==1.18.0",
+      "py-horned-owl==1.4.1",
+      "rdkit==2026.3.5"
     ]
   }
 ]
