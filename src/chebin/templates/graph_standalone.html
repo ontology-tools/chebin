@@ -419,11 +419,14 @@ body {
         // removals, are not tracked individually.
         let manualHideActive = false;
 
-        // Flip the graph vertically to have roots at the top
-        cy.nodes().forEach(node => {
-            const pos = node.position();
-            node.position({ x: pos.x, y: -pos.y });
-        });
+        // No vertical flip here. There used to be one, labelled "flip the graph
+        // vertically to have roots at the top", but it ran before cose had
+        // written any positions and so only ever negated zeros. Reinstating it
+        // after layoutstop would not help either: cose is force-directed and has
+        // no vertical meaning -- across eight loads of two datasets the root sat
+        // anywhere from 10% to 96% of the way down, so mirroring just swaps one
+        // arbitrary orientation for another. The flip in the layout menu below is
+        // real and stays: it is what puts roots at the top under breadthfirst.
 
         // Snapshot the opening picture so "Reset graph" can restore it without a
         // page reload. Positions rather than a re-layout: cose is force-directed,
