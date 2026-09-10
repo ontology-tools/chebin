@@ -128,6 +128,16 @@ CSS_SELECTORS = [
     ".p-filter-ends",
     "#p-filter .form-check-label",
     "#p-filter p",
+    # The on-canvas controls live inside .graph-wrapper, so they are lifted with
+    # the body and need their styling lifted too.
+    "#graph-tools",
+    ".tools-handle",
+    "#graph-tools button",
+    "#graph-tools button:hover:enabled",
+    "#graph-tools button:disabled",
+    '#graph-tools button[aria-pressed="true"]',
+    "#graph-tools button:focus-visible",
+    ".tools-status",
 ]
 
 # Standalone-only chrome: replaces base.html's Bootstrap and the navbar dropdowns.
@@ -166,6 +176,9 @@ body {
   cursor: pointer;
 }
 #toolbar button:hover { background: #eee; }
+/* Toggle state, which Bootstrap supplies on the website. */
+#toolbar button[aria-pressed="true"] { background: #0f808d; border-color: #0f808d; color: #fff; }
+#toolbar button:focus-visible { outline: 2px solid #0f808d; outline-offset: 2px; }
 """
 
 # The navbar dropdowns need Bootstrap JS; a plain toolbar carries the same hooks
@@ -195,9 +208,12 @@ TOOLBAR_HTML = """<div id="toolbar">
     <button type="button" class="show-hide-option" data-action="hide-unselected">Selected only</button>
     <button type="button" class="show-hide-option" data-action="hide-selected">Hide selected</button>
     <button type="button" class="show-hide-option" data-action="hide-non-significant">Hide non-significant</button>
-    <button type="button" class="show-hide-option" data-action="hide-labels">Toggle labels</button>
+    <button type="button" class="show-hide-option" data-action="hide-labels" aria-pressed="false"><span class="control-text">Hide labels</span></button>
   </div>
 </div>"""
+# Note: "Remove selected" and "Reset graph" are deliberately absent here. They live
+# in the #graph-tools panel inside .graph-wrapper, which this page lifts verbatim --
+# repeating them would give the standalone page two buttons per action.
 
 
 def fail(message):

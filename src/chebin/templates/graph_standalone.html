@@ -146,6 +146,72 @@
   margin-top: 4px;
 }
 
+#graph-tools {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0 0 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 11px;
+  width: 180px;
+  z-index: 1000;
+}
+
+.tools-handle {
+  cursor: move;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #ddd;
+  border-radius: 4px 4px 0 0;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #555;
+}
+
+#graph-tools button {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 0 10px 4px 10px;
+  padding: 4px 8px;
+  text-align: left;
+  font: inherit;
+  color: #1f2937;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#graph-tools button:hover:enabled {
+  background: #eee;
+}
+
+#graph-tools button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#graph-tools button[aria-pressed="true"] {
+  background: #0f808d;
+  border-color: #0f808d;
+  color: #fff;
+}
+
+#graph-tools button:focus-visible {
+  outline: 2px solid #0f808d;
+  outline-offset: 1px;
+}
+
+.tools-status {
+  margin: 0 10px;
+  min-height: 1.2em;
+  color: #6b7280;
+  font-size: 10px;
+}
+
 /* --- standalone page chrome (replaces base.html + Bootstrap) --- */
 * { box-sizing: border-box; }
 body {
@@ -180,6 +246,9 @@ body {
   cursor: pointer;
 }
 #toolbar button:hover { background: #eee; }
+/* Toggle state, which Bootstrap supplies on the website. */
+#toolbar button[aria-pressed="true"] { background: #0f808d; border-color: #0f808d; color: #fff; }
+#toolbar button:focus-visible { outline: 2px solid #0f808d; outline-offset: 2px; }
 </style>
 <script>/*__CHEBIN_CYTOSCAPE_JS__*/</script>
 <script>window.__CHEBIN_GRAPH_DATA__ = /*__CHEBIN_GRAPH_DATA__*/;</script>
@@ -210,13 +279,45 @@ body {
     <button type="button" class="show-hide-option" data-action="hide-unselected">Selected only</button>
     <button type="button" class="show-hide-option" data-action="hide-selected">Hide selected</button>
     <button type="button" class="show-hide-option" data-action="hide-non-significant">Hide non-significant</button>
-    <button type="button" class="show-hide-option" data-action="hide-labels">Toggle labels</button>
+    <button type="button" class="show-hide-option" data-action="hide-labels" aria-pressed="false"><span class="control-text">Hide labels</span></button>
   </div>
 </div>
 
 <div class="graph-wrapper">
 
     <div id="cy"></div>
+
+    <!-- Direct controls for the actions people reach for most often, so they are
+         not only reachable through the navbar's Show/Hide dropdown. Both routes
+         carry the same .show-hide-option[data-action] hooks and run the same
+         switch, so they cannot drift apart.
+
+         Deliberately styled without Bootstrap: this panel sits inside
+         .graph-wrapper, which tools/build_standalone_graph_template.py lifts
+         verbatim into a page that has neither Bootstrap nor Font Awesome. Hence
+         also why no icon is ever a button's only label. -->
+    <div id="graph-tools" role="group" aria-label="Graph controls">
+        <div class="tools-handle" title="Drag to move">
+            <i class="fa fa-arrows-up-down-left-right" aria-hidden="true"></i> Controls
+        </div>
+        <button type="button" class="show-hide-option" data-action="remove-selected" disabled
+                title="Remove the selected nodes from the graph">
+            <i class="fa fa-trash" aria-hidden="true"></i> <span class="control-text">Remove selected</span>
+        </button>
+        <button type="button" class="show-hide-option" data-action="restore-hidden" disabled
+                title="Bring back removed and hidden nodes that pass the current p-value filter">
+            <i class="fa fa-trash-arrow-up" aria-hidden="true"></i> <span class="control-text">Return hidden nodes</span>
+        </button>
+        <button type="button" class="show-hide-option" data-action="hide-labels" aria-pressed="false"
+                title="Hide or show the node labels">
+            <i class="fa fa-tag" aria-hidden="true"></i> <span class="control-text">Hide labels</span>
+        </button>
+        <button type="button" class="show-hide-option" data-action="reset-graph"
+                title="Restore removed nodes, filters, labels, layout and zoom">
+            <i class="fa fa-rotate-left" aria-hidden="true"></i> <span class="control-text">Reset graph</span>
+        </button>
+        <div class="tools-status" aria-live="polite"></div>
+    </div>
 
     <div id="color-legend" aria-label="Graph colour legend">
         <div id="legend-title"></div>
@@ -234,7 +335,7 @@ body {
          Settings modal, which re-runs the analysis server-side. -->
     <div id="p-filter" aria-label="p-value threshold filter">
         <div class="p-filter-handle" title="Drag to move">
-            <i class="fa fa-arrows"></i> p-value filter
+            <i class="fa fa-arrows-up-down-left-right" aria-hidden="true"></i> p-value filter
         </div>
         <label for="p-threshold-slider">
             Hide nodes with p &gt; <output id="p-threshold-value">5.0e-2</output>
@@ -306,14 +407,48 @@ body {
 
         let labelsVisible = true;
 
+        // Nodes the user has removed. Tracked as a set of ids rather than
+        // cy.remove()'d so "Reset graph" can bring them back without rebuilding
+        // the graph, and so the colour scale -- computed once below over every
+        // node -- does not shift under the user as they remove things.
+        const removedIds = new Set();
+
+        // Set by the one-off hide actions, cleared by any full recompute -- which
+        // is exactly when those hides stop being in effect. Lets "Return hidden
+        // nodes" know there is something to undo even though manual hides, unlike
+        // removals, are not tracked individually.
+        let manualHideActive = false;
+
         // Flip the graph vertically to have roots at the top
         cy.nodes().forEach(node => {
             const pos = node.position();
             node.position({ x: pos.x, y: -pos.y });
         });
 
-        // Center the graph in the viewport
-        cy.fit(50); // 50px padding
+        // Snapshot the opening picture so "Reset graph" can restore it without a
+        // page reload. Positions rather than a re-layout: cose is force-directed,
+        // so re-running it would produce a different graph rather than the one the
+        // user started from.
+        //
+        // Both the snapshot and the fit have to wait for layoutstop. cose is
+        // asynchronous -- it runs the physics on a private copy and writes
+        // positions back over animation frames -- so right here every node is
+        // still at Cytoscape's default (0, 0). Snapshotting now would capture a
+        // map of zeros, and restoring that would stack the whole graph at the
+        // origin under an enormous zoom.
+        let initialPositions = new Map();
+
+        cy.one('layoutstop', () => {
+            initialPositions = new Map(
+                cy.nodes().map(node => [node.id(), { ...node.position() }])
+            );
+
+            // Center the graph in the viewport. cose fits with its own padding
+            // when it finishes, so this has to run after it to take effect --
+            // and it is what makes a reset frame the graph exactly as the
+            // opening view does.
+            cy.fit(50); // 50px padding
+        });
 
         // Single source of truth for "the" p-value of a node: corrected if
         // available, else raw.
@@ -587,6 +722,8 @@ body {
                 <div style="padding:8px 16px; cursor:pointer; hover:background:#f0f0f0;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.selectNode()">Select node</div>
                 <div style="padding:8px 16px; cursor:pointer;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.selectNeighbors()">Select first neighbors</div>
                 <div style="padding:8px 16px; cursor:pointer;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.selectDescendants()">Select descendants</div>
+                <div style="border-top:1px solid #eee; margin:4px 0;"></div>
+                <div style="padding:8px 16px; cursor:pointer; color:#a00;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.removeNode()">Remove node</div>
             `;
 
             contextMenu.style.display = 'block';
@@ -624,6 +761,21 @@ body {
                 // Select all descendants (this will be predecessors due to the directed nature of the graph)
                 const descendants = selectedNode.predecessors();
                 descendants.select();
+            }
+            contextMenu.style.display = 'none';
+        };
+
+        // Removing acts on the whole selection when the right-clicked node is part
+        // of it, so "select descendants -> remove" stays one gesture rather than n.
+        window.removeNode = function() {
+            if (selectedNode) {
+                const targets = selectedNode.selected()
+                    ? cy.nodes(':selected')
+                    : selectedNode;
+                targets.forEach(node => removedIds.add(node.id()));
+                targets.unselect();
+                applyVisibility();
+                syncViewControls();
             }
             contextMenu.style.display = 'none';
         };
@@ -749,7 +901,10 @@ body {
         document.querySelectorAll('.export-option').forEach(item => {
             item.addEventListener('click', e => {
                 e.preventDefault(); // stop link navigation
-                const format = e.target.dataset.format;
+                // currentTarget, not target: a control may carry an icon or a
+                // <span>, and a click landing on one of those would otherwise
+                // read the dataset of the child rather than the control.
+                const format = e.currentTarget.dataset.format;
                 if (format === 'png' || format === 'jpeg') {
                     exportGraphWithLegend(format);
                 }
@@ -761,7 +916,7 @@ body {
         item.addEventListener('click', e => {
             e.preventDefault(); // stop link navigation
 
-            const layoutName = e.target.dataset.layout;
+            const layoutName = e.currentTarget.dataset.layout;
 
             cy.layout({
                 name: layoutName,
@@ -802,6 +957,27 @@ body {
             return keep;
         }
 
+        // Removed nodes are hidden after every recompute rather than during it.
+        // applyVisibility() rebuilds the view from scratch on each call, so a
+        // removal that was only applied once would be undone by the next slider
+        // move -- which is exactly what happens to "Hide selected" today.
+        function hideRemoved() {
+            removedIds.forEach(id => {
+                const node = cy.getElementById(id);
+                node.style('display', 'none');
+                node.connectedEdges().style('display', 'none');
+            });
+        }
+
+        // Shared by the label toggle and by "Reset graph", which needs to put the
+        // labels back without going through the toggle.
+        function applyLabelVisibility() {
+            cy.style()
+              .selector('node')
+              .style({ 'label': labelsVisible ? 'data(short_label)' : '' })
+              .update();
+        }
+
         // Recompute display from scratch rather than only ever hiding. This is
         // what lets the threshold slider work in both directions.
         function showOnly(idSet) {
@@ -824,13 +1000,18 @@ body {
         // otherwise dragging the slider to maximum stringency would flood the
         // view with every node instead of narrowing to none.
         function applyVisibility(allowFallback = false) {
-            let passing = cy.nodes().filter(node => {
+            // Removed nodes are excluded up front, not just hidden at the end, so
+            // collectAncestors() cannot route a surviving node's path to the root
+            // through something the user deleted.
+            const kept = cy.nodes().filter(node => !removedIds.has(node.id()));
+
+            let passing = kept.filter(node => {
                 const p = getP(node);
                 return p != null && p <= pThreshold;
             });
 
             if (allowFallback && passing.length === 0) {
-                passing = cy.nodes().filter(node => {
+                passing = kept.filter(node => {
                     const p = getP(node);
                     return p != null && p < 1;
                 });
@@ -838,6 +1019,8 @@ body {
                 if (passing.length === 0) {
                     cy.nodes().style('display', 'element');
                     cy.edges().style('display', 'element');
+                    hideRemoved();
+                    manualHideActive = false;
                     return;
                 }
             }
@@ -846,6 +1029,10 @@ body {
                 ? collectAncestors(passing)
                 : new Set(passing.map(node => node.id()));
             showOnly(ids);
+            hideRemoved();
+
+            // Recomputing from scratch has just wiped any manual hides.
+            manualHideActive = false;
         }
 
         /////////
@@ -872,7 +1059,53 @@ body {
             slider.value = Math.max(0, Math.min(sliderMax, exponent));
             thresholdOut.textContent = pThreshold.toExponential(1);
             pathsToggle.checked = keepPathsToRoot;
+            syncViewControls();
         }
+
+        // Push view state into every control that displays it, so the on-canvas
+        // panel and the navbar menu can never disagree about whether labels are
+        // on. Selector-driven rather than by id, because the same JS drives the
+        // website's two copies of these controls and the standalone export's own
+        // toolbar.
+        function syncViewControls() {
+            const labelText = labelsVisible ? 'Hide labels' : 'Show labels';
+            document.querySelectorAll('[data-action="hide-labels"]').forEach(el => {
+                el.setAttribute('aria-pressed', String(!labelsVisible));
+                const text = el.querySelector('.control-text');
+                if (text) text.textContent = labelText;
+            });
+
+            // Removing nothing is not an action; say so rather than no-opping.
+            const anySelected = cy.nodes(':selected').nonempty();
+            document.querySelectorAll('button[data-action="remove-selected"]')
+                .forEach(el => { el.disabled = !anySelected; });
+
+            // Enabled whenever there is something to bring back: tracked removals,
+            // or a one-off hide that the next recompute has not yet swept away.
+            const anythingHidden = removedIds.size > 0 || manualHideActive;
+            document.querySelectorAll('button[data-action="restore-hidden"]')
+                .forEach(el => { el.disabled = !anythingHidden; });
+
+            const count = removedIds.size;
+            document.querySelectorAll('.tools-status').forEach(el => {
+                el.textContent = count
+                    ? `${count} node${count === 1 ? '' : 's'} removed`
+                    : '';
+            });
+        }
+
+        // Cytoscape fires select/unselect once per element, so "select
+        // descendants" over a large subtree would mean hundreds of DOM writes for
+        // one visible change. Coalesce them into a single frame.
+        let viewSyncQueued = false;
+        cy.on('select unselect', 'node', () => {
+            if (viewSyncQueued) return;
+            viewSyncQueued = true;
+            requestAnimationFrame(() => {
+                viewSyncQueued = false;
+                syncViewControls();
+            });
+        });
 
         slider.addEventListener('input', () => {
             pThreshold = Math.pow(10, -parseFloat(slider.value));
@@ -886,8 +1119,8 @@ body {
         const legend = document.getElementById('color-legend');
         panel.style.top = (legend.offsetTop + legend.offsetHeight + 10) + 'px';
 
-        // Drag by the title bar only, so the slider and checkbox stay usable.
-        (function makeDraggable(el, handle) {
+        // Drag by the title bar only, so the controls inside stay usable.
+        function makeDraggable(el, handle) {
             let dragging = false, grabX = 0, grabY = 0;
 
             handle.addEventListener('mousedown', e => {
@@ -918,7 +1151,12 @@ body {
             });
 
             document.addEventListener('mouseup', () => { dragging = false; });
-        })(panel, panel.querySelector('.p-filter-handle'));
+        }
+
+        makeDraggable(panel, panel.querySelector('.p-filter-handle'));
+
+        const tools = document.getElementById('graph-tools');
+        makeDraggable(tools, tools.querySelector('.tools-handle'));
 
         pathsToggle.addEventListener('change', () => {
             keepPathsToRoot = pathsToggle.checked;
@@ -935,7 +1173,7 @@ body {
             item.addEventListener('click', e => {
                 e.preventDefault(); // stop link navigation
 
-                const action = e.target.dataset.action;
+                const action = e.currentTarget.dataset.action;
 
                 switch(action) {
                     // One-off manual operations. The next threshold change
@@ -945,6 +1183,9 @@ body {
                         cy.nodes(':unselected').style('display', 'none');
                         // Also hide edges connected to hidden nodes
                         cy.nodes(':unselected').connectedEdges().style('display', 'none');
+                        hideRemoved(); // a removed node must not reappear by being selected
+                        manualHideActive = true;
+                        syncViewControls();
                         break;
 
                     case 'hide-selected':
@@ -952,6 +1193,8 @@ body {
                         cy.nodes(':selected').style('display', 'none');
                         // Also hide edges connected to hidden nodes
                         cy.nodes(':selected').connectedEdges().style('display', 'none');
+                        manualHideActive = true;
+                        syncViewControls();
                         break;
 
                     case 'show-all':
@@ -967,19 +1210,62 @@ body {
                                 node.connectedEdges().style('display', 'none');
                             }
                         });
+
+                        hideRemoved(); // "all" means all that are left, not the removed ones
                         break;
 
                     case 'hide-labels':
-
                         labelsVisible = !labelsVisible;
+                        applyLabelVisibility();
+                        syncViewControls();
+                        break;
 
-                        cy.style()
-                        .selector('node')
-                        .style({
-                            'label': labelsVisible ? 'data(short_label)' : ''
-                        })
-                        .update();
+                    case 'remove-selected': {
+                        const selected = cy.nodes(':selected');
+                        if (selected.empty()) break;
+                        selected.forEach(node => removedIds.add(node.id()));
+                        selected.unselect();
+                        applyVisibility();
+                        syncViewControls();
+                        break;
+                    }
 
+                    case 'restore-hidden':
+                        // Only un-hides. Layout, labels, zoom and threshold are
+                        // left alone -- that is what separates this from a reset.
+                        // applyVisibility() recomputes against the current
+                        // threshold, so nodes return only if they pass it, and
+                        // transient hides from "Hide selected" are swept up in
+                        // the same pass. Selection is deliberately left untouched.
+                        removedIds.clear();
+                        applyVisibility();
+                        syncViewControls();
+                        break;
+
+                    case 'reset-graph':
+                        // The opening state, without a page reload. View-only:
+                        // the Settings modal's server-side analysis parameters
+                        // are deliberately untouched.
+                        removedIds.clear();
+                        cy.elements().unselect();
+
+                        // Guard: if the opening layout never settled we have no
+                        // snapshot, and restoring an empty one would stack every
+                        // node at the origin. Leaving positions alone is better.
+                        if (initialPositions.size > 0) {
+                            cy.nodes().forEach(node => {
+                                const pos = initialPositions.get(node.id());
+                                if (pos) node.position(pos);
+                            });
+                        }
+
+                        labelsVisible   = true;
+                        pThreshold      = 0.05;
+                        keepPathsToRoot = true;
+                        applyLabelVisibility();
+                        syncFilterControls();   // also runs syncViewControls()
+                        applyVisibility(true);  // fallback on, as at first render
+                        cy.fit(50);
                         break;
 
                     case 'hide-non-significant':
