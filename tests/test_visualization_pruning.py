@@ -17,6 +17,7 @@ from chebin.calculations.visualitations_and_pruning import (
     clean_label,
     create_graph_from_paths,
     extract_chebi_id,
+    graph_to_cytoscape_dict,
     high_p_value_branch_pruner,
     linear_branch_collapser_pruner_remove_less,
     root_children_pruner,
@@ -479,3 +480,38 @@ class TestChEBIIDExtractionEdgeCases:
         # Should extract the ID
         if "CHEBI" in label:
             assert isinstance(extracted, str)
+
+
+class TestCytoscapeChebiId:
+    """Every node carries the ChEBI id the graph view links to."""
+
+    @staticmethod
+    def _nodes(data):
+        return {
+            element["data"]["id"]: element["data"]
+            for element in data["elements"]
+            if "source" not in element["data"]
+        }
+
+    def test_chebi_id_is_a_curie(self):
+        """Nodes are keyed by OBO IRI; the view needs 'CHEBI:15377' to build a URL."""
+        graph = nx.DiGraph()
+        graph.add_node(
+            "http://purl.obolibrary.org/obo/CHEBI_15377",
+            label="water (CHEBI:15377)",
+        )
+
+        nodes = self._nodes(graph_to_cytoscape_dict(graph))
+
+        assert nodes["http://purl.obolibrary.org/obo/CHEBI_15377"]["chebi_id"] == (
+            "CHEBI:15377"
+        )
+
+    def test_chebi_id_is_none_for_a_non_chebi_node(self):
+        """Anything that isn't a ChEBI class stays unlinked rather than guessed at."""
+        graph = nx.DiGraph()
+        graph.add_node("urn:something:else", label="not a ChEBI class")
+
+        nodes = self._nodes(graph_to_cytoscape_dict(graph))
+
+        assert nodes["urn:something:else"]["chebi_id"] is None

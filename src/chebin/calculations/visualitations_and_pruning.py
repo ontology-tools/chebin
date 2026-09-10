@@ -6,6 +6,7 @@ from math import inf
 
 import networkx as nx
 
+from chebin.calculations.chebi_ids import to_chebi_curie
 from chebin.calculations.data_files import ID_TO_NAME_MAP
 from chebin.config import require_data_path
 
@@ -795,6 +796,11 @@ def graph_to_cytoscape_dict(
             "label": label,
             "short_label": short_label,
             "color": attrs.get("color", "#706C6C"),
+            # The node's identity as ChEBI itself writes it, so the graph view can
+            # link straight to the entry page without re-parsing the IRI or scraping
+            # the id back out of the label. None for the rare node that is not a
+            # ChEBI class; the view leaves those unlinked.
+            "chebi_id": to_chebi_curie(node),
         }
         # Add enrichment results to nodes if provided
 

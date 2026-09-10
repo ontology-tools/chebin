@@ -10,6 +10,19 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Graph nodes link to their ChEBI entry. A node's hover tooltip is titled
+  `D-glucoside (CHEBI:35436)` with the id itself a link to that entry, and
+  double-clicking a node opens the same page directly. Links go to
+  `https://www.ebi.ac.uk/chebi/CHEBI:35436`, ChEBI's current entry page --- the
+  older `searchId.do` and `chebiOntology.do` forms now only redirect there. The
+  tooltip is parked flush against the node rather than following the cursor, so
+  the link is something to aim at rather than chase, and it survives the pointer
+  leaving the node by 600 ms --- indefinitely once the pointer is on the tooltip
+  itself. Both the website and the offline standalone export have it; in the
+  export the link is inert until clicked, so the page still needs no network to
+  render. Nodes carry their id as a `chebi_id` CURIE for this, and graphs
+  written before that field fall back to the node's OBO IRI, so already exported
+  pages link too
 - ChEBI IDs are accepted in every format users write them in --- `CHEBI:17079`,
   `chebi:17079`, `ChEBI:17079`, `CHEBI_17079`, `CHEBI 17079`, `CHEBI ID: 17079`,
   the bare number `17079`, and full IRIs --- rather than `CHEBI:17079` alone.
@@ -29,6 +42,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The graph's node tooltip no longer uses qTip2. The `cytoscape-qtip` extension
+  binds `hide.event` as a Cytoscape event and calls `qtipApi.hide()` itself, so
+  qTip2's own `hide.fixed` and `hide.delay` never ran: the tooltip closed the
+  instant the pointer left the node, whatever delay was configured, and any pan
+  or zoom dismissed it too. That left the ChEBI link in it unreachable. It is
+  now the same hand-rolled tooltip the standalone export already used, so both
+  views share one implementation instead of two that drift. This drops the
+  jQuery, qTip2 and `cytoscape-qtip` CDN dependencies from the graph page
 - `calculate_weighted_p_value` annotates its `saddler` parameter as `_SaddleSum`
   instead of `object`, so the `saddler.pvalue()` call is type checked rather
   than silenced by a blanket `# type: ignore`

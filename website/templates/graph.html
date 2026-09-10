@@ -7,14 +7,6 @@
 <!-- Cytoscape -->
 <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
 
-<!-- jQuery + qTip2 -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.js"></script>
-
-<!-- Cytoscape-qTip extension -->
-<script src="https://cdn.jsdelivr.net/npm/cytoscape-qtip@2.7.0/cytoscape-qtip.min.js"></script>
-
 <!-- jsPDF (for PDF export) -->
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
@@ -189,6 +181,75 @@
         const getP = node => node.data('p_value_corrected') ?? node.data('p_value');
 
         /////////
+        // Links to ChEBI
+        /////////
+
+        // ChEBI's own entry page. The older searchId.do / chebiOntology.do query
+        // forms still work but only as redirects to this one, so link it directly.
+        // The colon is deliberately not percent-encoded: /chebi/CHEBI%3A15377 404s
+        // where /chebi/CHEBI:15377 resolves.
+        const CHEBI_ENTRY_URL = 'https://www.ebi.ac.uk/chebi/';
+
+        // Nodes carry `chebi_id` as a CURIE ("CHEBI:15377"). Graph JSON written
+        // before that field existed does not, so fall back to the node's own id --
+        // the OBO IRI ".../CHEBI_15377" -- which keeps already-exported pages and
+        // still-open sessions working. A node that is neither stays unlinked rather
+        // than pointing somewhere wrong.
+        const chebiId = node => {
+            const curie = node.data('chebi_id');
+            if (typeof curie === 'string' && /^CHEBI:\d+$/.test(curie)) return curie;
+
+            const match = /CHEBI[_:](\d+)$/.exec(node.data('id') ?? '');
+            return match === null ? null : 'CHEBI:' + match[1];
+        };
+
+        const chebiUrl = node => {
+            const id = chebiId(node);
+            return id === null ? null : CHEBI_ENTRY_URL + id;
+        };
+
+        // Opened in a new tab so the graph -- its layout, selection and filters --
+        // survives the trip to ChEBI.
+        const openChebiEntryFor = node => {
+            const url = chebiUrl(node);
+            if (url !== null) window.open(url, '_blank', 'noopener');
+        };
+
+        // Names come from ChEBI and are dropped into innerHTML below; a few contain
+        // characters that would otherwise be read as markup.
+        const escapeHtml = text => String(text ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // The tooltip's title line: the node's label with its ChEBI id linked, so
+        // "D-glucoside (CHEBI:35436)" carries the link on "CHEBI:35436" itself.
+        // Only the id is a link, not the whole title: the name stays selectable text.
+        const titleHtml = node => {
+            const id = chebiId(node);
+            const label = escapeHtml(String(node.data('label') ?? '').replace('CHEBI_', 'CHEBI:'));
+            if (id === null) return '<b>' + label + '</b>';
+
+            const link = '<a href="' + chebiUrl(node) + '" target="_blank" rel="noopener">' + id + '</a>';
+            const name = escapeHtml(String(node.data('short_label') ?? '').trim());
+
+            // A node with no name is labelled by its id alone -- nothing to bracket.
+            return name === '' || name === id
+                ? '<b>' + link + '</b>'
+                : '<b>' + name + ' (' + link + ')</b>';
+        };
+
+        // How long the tooltip survives the pointer leaving the node. It sits still
+        // and flush against the node, so reaching the ChEBI link inside it is a short
+        // move onto an adjacent box -- and arriving cancels the countdown entirely.
+        // This does not need to be generous.
+        const TOOLTIP_HIDE_DELAY_MS = 600;
+
+        // A node's ChEBI entry also opens on double-click. Cytoscape's own
+        // single-click selection is left alone; it drives the show/hide filters.
+        cy.on('dbltap', 'node', evt => openChebiEntryFor(evt.target));
+
+        /////////
         // Colouring
         /////////
 
@@ -271,25 +332,97 @@
         });
 
 
-        // Add tooltip to hover over nodes
-        cy.nodes().forEach(function(node) {
-            const pValue = node.data('p_value');
-            const pValueCorr = node.data('p_value_corrected');
+        // Node hover tooltip.
+        //
+        // Hand-rolled rather than qTip2, which this page used to use through the
+        // cytoscape-qtip extension. The tooltip's title carries a link to ChEBI, so
+        // it has to survive the pointer leaving the node and travelling onto it --
+        // and that is exactly what cytoscape-qtip cannot do: it binds hide.event as
+        // a Cytoscape event and calls qtipApi.hide() itself, so qTip2's own
+        // hide.fixed and hide.delay never run and the tooltip closes the instant the
+        // pointer leaves the node. It also hid on every pan and zoom by default.
+        const tooltip = document.createElement('div');
+        tooltip.id = 'node-tooltip';
+        document.body.appendChild(tooltip);
 
-            // Format to 2 decimal places in exponential notation (gives 3 significant figures)
-            const formattedPValue = pValue != null ? pValue.toExponential(2) : 'N/A';
-            const formattedPValueCorr = pValueCorr != null ? pValueCorr.toExponential(2) : 'N/A';
+        // Format to 2 decimal places in exponential notation (gives 3 significant figures)
+        const formatP = (value) => value != null ? value.toExponential(2) : 'N/A';
 
-            node.qtip({
-                content: `
-                    <b>${node.data('label').replace('CHEBI_', 'CHEBI:')}</b><br>
-                    p-value: ${formattedPValue}<br>
-                    corr. p-value: ${formattedPValueCorr}
-                `,
-                show: {event: 'mouseover'},
-                hide: {event: 'mouseout'},
-            })
+        let hideTimer = null;
+
+        const hideTooltip = () => {
+            clearTimeout(hideTimer);
+            tooltip.style.display = 'none';
+        };
+
+        const scheduleHide = () => {
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(
+                () => { tooltip.style.display = 'none'; },
+                TOOLTIP_HIDE_DELAY_MS,
+            );
+        };
+
+        tooltip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        tooltip.addEventListener('mouseleave', scheduleHide);
+
+        // Parked against the node and left there. It used to follow the cursor, which
+        // made the link in it something you chased rather than something you aimed
+        // at. It sits flush against the node's right edge -- touching it, so the
+        // pointer never crosses bare canvas on the way -- flipping to the left and
+        // clamping upwards only when it would otherwise leave the viewport.
+        const placeTooltipBy = (node) => {
+            const rect = document.getElementById('cy').getBoundingClientRect();
+
+            // The node's own circle, not renderedBoundingBox(): that includes the
+            // node's label by default, and the labels sit under the nodes and are far
+            // wider than the 30px circle, which left the tooltip parked out beside
+            // the text rather than against the node.
+            const centre = node.renderedPosition();
+            const halfWidth = node.renderedOuterWidth() / 2;
+            const halfHeight = node.renderedOuterHeight() / 2;
+
+            // Breathing room against the window edge only, never against the node.
+            const edge = 8;
+
+            // Real measurements: the caller has already set the content and made the
+            // tooltip visible.
+            const width = tooltip.offsetWidth;
+            const height = tooltip.offsetHeight;
+
+            let left = rect.left + centre.x + halfWidth;
+            if (left + width > window.innerWidth - edge) {
+                left = rect.left + centre.x - halfWidth - width;
+            }
+
+            let top = rect.top + centre.y - halfHeight;
+            if (top + height > window.innerHeight - edge) {
+                top = window.innerHeight - height - edge;
+            }
+
+            tooltip.style.left = Math.max(edge, left) + 'px';
+            tooltip.style.top = Math.max(edge, top) + 'px';
+        };
+
+        cy.on('mouseover', 'node', (evt) => {
+            const node = evt.target;
+            clearTimeout(hideTimer);
+
+            tooltip.innerHTML =
+                titleHtml(node) + '<br>' +
+                'p-value: ' + formatP(node.data('p_value')) + '<br>' +
+                'corr. p-value: ' + formatP(node.data('p_value_corrected'));
+
+            tooltip.style.display = 'block';
+            placeTooltipBy(node);
         });
+
+        cy.on('mouseout', 'node', scheduleHide);
+
+        // The tooltip is clickable, so a stale one left sitting over the graph would
+        // swallow clicks meant for the nodes underneath. Touching the graph itself
+        // dismisses it immediately, whatever is left of the delay.
+        cy.on('tap pan zoom', hideTooltip);
 
         // Custom context menu div
         const contextMenu = document.createElement('div');

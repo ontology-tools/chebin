@@ -141,7 +141,13 @@ def test_run_narrow_background_plain_enrich(recon3d):
 
 
 def test_export_graph_html_is_self_contained(tmp_path):
-    """The packaged graph export must not reach the network."""
+    """The packaged graph export must not reach the network to render.
+
+    Nothing may be *loaded* from the network -- no external script, stylesheet or
+    image. The per-node ChEBI links are not that: they are inert until clicked, and
+    each URL is assembled at runtime from the node's id, so no external href is
+    written into the file either. See test_export_graph_html_links_nodes_to_chebi.
+    """
     from chebin.calculations.fishers_calculations import run_enrichment_analysis
     from chebin.visualization import export_graph_html
 
@@ -156,3 +162,26 @@ def test_export_graph_html_is_self_contained(tmp_path):
     assert "/*__CHEBIN_GRAPH_DATA__*/" not in page
     assert "/*__CHEBIN_CYTOSCAPE_JS__*/" not in page
     assert "Cytoscape Consortium" in page  # the vendored bundle is inlined
+
+
+def test_export_graph_html_links_nodes_to_chebi(tmp_path):
+    """The exported page can take a node to its ChEBI entry.
+
+    The link is built in JS from each node's id, so what the file can show is the
+    machinery: the entry-page base URL and the two ways in (the tooltip title, and
+    double-click).
+    """
+    from chebin.calculations.fishers_calculations import run_enrichment_analysis
+    from chebin.visualization import export_graph_html
+
+    result, graph = run_enrichment_analysis(STUDY_SET)
+    out = tmp_path / "graph.html"
+    export_graph_html(graph, result, str(out))
+
+    page = out.read_text()
+    assert "https://www.ebi.ac.uk/chebi/" in page
+    assert "titleHtml" in page  # the tooltip title, with its id linked
+    assert "dbltap" in page  # the double-click shortcut
+
+    # The ids the link is built from survive into the inlined graph data.
+    assert '"chebi_id": "CHEBI:' in page

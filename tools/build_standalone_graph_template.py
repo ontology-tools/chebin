@@ -7,8 +7,6 @@ the package template from it, applying the differences a serverless page needs:
 
 * the graph JSON is inlined instead of fetched from a Flask `static` URL,
 * Cytoscape is inlined from the vendored copy instead of loaded from a CDN,
-* the qTip2 tooltip (its only use, and the reason jQuery was pulled in) is replaced by a
-  plain positioned div,
 * PDF export is dropped -- it was jsPDF's only use, and PNG/JPEG come from Cytoscape
   itself,
 * the Bootstrap navbar dropdowns become a plain toolbar, and the Flask re-run form and
@@ -47,51 +45,6 @@ FETCH_OLD = """    fetch("{{url_for('static', filename='data/' ~ graph_file)}}")
     .then(data => {"""
 FETCH_NEW = """    Promise.resolve(window.__CHEBIN_GRAPH_DATA__)
     .then(data => {"""
-
-TOOLTIP_OLD = """        // Add tooltip to hover over nodes
-        cy.nodes().forEach(function(node) {
-            const pValue = node.data('p_value');
-            const pValueCorr = node.data('p_value_corrected');
-
-            // Format to 2 decimal places in exponential notation (gives 3 significant figures)
-            const formattedPValue = pValue != null ? pValue.toExponential(2) : 'N/A';
-            const formattedPValueCorr = pValueCorr != null ? pValueCorr.toExponential(2) : 'N/A';
-
-            node.qtip({
-                content: `
-                    <b>${node.data('label').replace('CHEBI_', 'CHEBI:')}</b><br>
-                    p-value: ${formattedPValue}<br>
-                    corr. p-value: ${formattedPValueCorr}
-                `,
-                show: {event: 'mouseover'},
-                hide: {event: 'mouseout'},
-            })
-        });"""
-
-TOOLTIP_NEW = """        // Node tooltip. The website uses qTip2 here; that pulls in jQuery, so the
-        // standalone page uses a plain positioned div with the same content.
-        const tooltip = document.createElement('div');
-        tooltip.id = 'node-tooltip';
-        document.body.appendChild(tooltip);
-
-        const formatP = (value) => value != null ? value.toExponential(2) : 'N/A';
-
-        cy.on('mouseover', 'node', (evt) => {
-            const node = evt.target;
-            tooltip.innerHTML =
-                '<b>' + node.data('label').replace('CHEBI_', 'CHEBI:') + '</b><br>' +
-                'p-value: ' + formatP(node.data('p_value')) + '<br>' +
-                'corr. p-value: ' + formatP(node.data('p_value_corrected'));
-            tooltip.style.display = 'block';
-        });
-
-        cy.on('mouseout', 'node', () => { tooltip.style.display = 'none'; });
-
-        document.getElementById('cy').addEventListener('mousemove', (e) => {
-            if (tooltip.style.display !== 'block') return;
-            tooltip.style.left = (e.clientX + 14) + 'px';
-            tooltip.style.top = (e.clientY + 14) + 'px';
-        });"""
 
 # PDF export removal. jsPDF's only job was wrapping an already-generated PNG.
 PDF_SUBSTITUTIONS = [
@@ -160,6 +113,8 @@ PDF_SUBSTITUTIONS = [
 CSS_SELECTORS = [
     ".graph-wrapper",
     "#cy",
+    "#node-tooltip",
+    "#node-tooltip a",
     "#color-legend",
     "#color-legend h4",
     ".legend-container",
@@ -211,21 +166,6 @@ body {
   cursor: pointer;
 }
 #toolbar button:hover { background: #eee; }
-
-#node-tooltip {
-  position: fixed;
-  display: none;
-  z-index: 2000;
-  max-width: 320px;
-  padding: 6px 9px;
-  border: 1px solid #b0b0b0;
-  border-radius: 4px;
-  background: #ffffe0;
-  font-size: 12px;
-  line-height: 1.35;
-  pointer-events: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
 """
 
 # The navbar dropdowns need Bootstrap JS; a plain toolbar carries the same hooks
@@ -298,7 +238,6 @@ def extract_js(html):
 def apply_substitutions(js):
     for old, new in [
         (FETCH_OLD, FETCH_NEW),
-        (TOOLTIP_OLD, TOOLTIP_NEW),
         *PDF_SUBSTITUTIONS,
     ]:
         if js.count(old) != 1:
@@ -318,7 +257,9 @@ def main():
     body = extract_body(html)
     js = apply_substitutions(extract_js(html))
 
-    for banned in ("{{", "{%", "url_for", "qtip", "jspdf", "jsPDF"):
+    # Calls, not mentions: the tooltip code explains at length why it does not use
+    # cytoscape-qtip, and that prose is not a dependency on it.
+    for banned in ("{{", "{%", "url_for", ".qtip(", "jspdf.", "jsPDF"):
         if banned in js or banned in body:
             fail(
                 f"'{banned}' still present in the lifted markup -- it would not work offline",

@@ -100,6 +100,28 @@ body:has(.graph-wrapper) .site-footer {
   border: none;
 }
 
+/* The node hover tooltip. Shared with the standalone graph export, which lifts
+   this rule verbatim (tools/build_standalone_graph_template.py). */
+#node-tooltip {
+  position: fixed;
+  display: none;
+  z-index: 2000;
+  max-width: 320px;
+  padding: 6px 9px;
+  border: 1px solid #b0b0b0;
+  border-radius: 4px;
+  background: #ffffe0;
+  font-size: 12px;
+  line-height: 1.35;
+  /* Clickable: the tooltip holds the node's ChEBI link. */
+  pointer-events: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+#node-tooltip a {
+  color: #0f808d;
+}
+
 /* ============================================================
    Skip link (accessibility)
    ============================================================ */

@@ -573,7 +573,9 @@ options, can be done by clicking on 'Settings'. The previously used options will
 be pre-selected.
 
 Hovering over a node displays more detailed information about it. Both raw and
-corrected p-values are shown, as well as its ChEBI ID.
+corrected p-values are shown, as well as its ChEBI ID. 
+Clicking on the ID, or double-clicking on the node,
+will take you to that class' page on the ChEBI website.
 
 Nodes can be selected by clicking on them. Right-clicking on a node provides the
 options as seen in the figure below.
