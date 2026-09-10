@@ -206,14 +206,13 @@ TOOLBAR_HTML = """<div id="toolbar">
     <button type="button" class="show-hide-option" data-action="show-significant-with-paths">Most relevant paths</button>
     <button type="button" class="show-hide-option" data-action="show-all">Show all</button>
     <button type="button" class="show-hide-option" data-action="hide-unselected">Selected only</button>
-    <button type="button" class="show-hide-option" data-action="hide-selected">Hide selected</button>
     <button type="button" class="show-hide-option" data-action="hide-non-significant">Hide non-significant</button>
     <button type="button" class="show-hide-option" data-action="hide-labels" aria-pressed="false"><span class="control-text">Hide labels</span></button>
   </div>
 </div>"""
-# Note: "Remove selected" and "Reset graph" are deliberately absent here. They live
-# in the #graph-tools panel inside .graph-wrapper, which this page lifts verbatim --
-# repeating them would give the standalone page two buttons per action.
+# Note: "Hide selected nodes", "Return hidden nodes" and "Reset graph" are deliberately
+# absent here. They live in the #graph-tools panel inside .graph-wrapper, which this page
+# lifts verbatim -- repeating them would give the standalone page two buttons per action.
 
 
 def fail(message):

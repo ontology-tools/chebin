@@ -10,23 +10,22 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- The graph page has a controls panel sitting on the canvas itself, so removing
+- The graph page has a controls panel sitting on the canvas itself, so hiding
   nodes, restoring the original view and hiding labels no longer have to be
   found in the navbar's Show/Hide menu. It mirrors the p-value filter on the
   opposite corner --- same chrome, same drag handle --- and reports how many
-  nodes have been removed. The menu keeps every item it had; the two routes run
-  the same code and stay in step, so toggling labels from one updates the other.
-  Removing nodes is new: it acts on the current selection, or on a single node
-  through its right-click menu, and because the selection tools already offer
-  "select descendants" a whole subtree goes in two clicks. Removed nodes stay
-  removed --- unlike "Hide selected", which the next threshold change quietly
-  undid --- until they are brought back. Two ways to do that: "Return hidden
-  nodes" restores everything hidden or removed so far and nothing else, leaving
-  the layout, labels, zoom and threshold exactly as they are, so nodes come back
-  only if they still pass the p-value filter; "Reset graph" goes further and
-  returns the whole view to how it opened, layout and zoom included. Nothing is
-  deleted from the underlying graph, so the colour scale does not shift as nodes
-  go. The standalone export gets the panel too
+  nodes are hidden. The menu keeps its items; both routes run the same code and
+  stay in step, so toggling labels from one updates the other. "Hide selected
+  nodes" also works on a single node from its right-click menu, and because the
+  selection tools already offer "select descendants" a whole subtree goes in two
+  clicks. Hidden nodes now stay hidden: the action used to be undone by the next
+  nudge of the threshold slider, which made it look as though nothing had
+  happened. Two ways to bring them back: "Return hidden nodes" restores what is
+  hidden and nothing else, leaving the layout, labels, zoom and threshold as
+  they are, so nodes reappear only if they still pass the p-value filter; "Reset
+  graph" goes further and returns the whole view to how it opened, layout and
+  zoom included. Nothing is deleted from the underlying graph, so the colour
+  scale does not shift as nodes go. The standalone export gets the panel too
 
 - Graph nodes link to their ChEBI entry. A node's hover tooltip is titled
   `D-glucoside (CHEBI:35436)` with the id itself a link to that entry, and

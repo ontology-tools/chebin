@@ -277,7 +277,6 @@ body {
     <button type="button" class="show-hide-option" data-action="show-significant-with-paths">Most relevant paths</button>
     <button type="button" class="show-hide-option" data-action="show-all">Show all</button>
     <button type="button" class="show-hide-option" data-action="hide-unselected">Selected only</button>
-    <button type="button" class="show-hide-option" data-action="hide-selected">Hide selected</button>
     <button type="button" class="show-hide-option" data-action="hide-non-significant">Hide non-significant</button>
     <button type="button" class="show-hide-option" data-action="hide-labels" aria-pressed="false"><span class="control-text">Hide labels</span></button>
   </div>
@@ -300,20 +299,20 @@ body {
         <div class="tools-handle" title="Drag to move">
             <i class="fa fa-arrows-up-down-left-right" aria-hidden="true"></i> Controls
         </div>
-        <button type="button" class="show-hide-option" data-action="remove-selected" disabled
-                title="Remove the selected nodes from the graph">
-            <i class="fa fa-trash" aria-hidden="true"></i> <span class="control-text">Remove selected</span>
+        <button type="button" class="show-hide-option" data-action="hide-selected" disabled
+                title="Hide the selected nodes; they stay hidden until you bring them back">
+            <i class="fa fa-eye-slash" aria-hidden="true"></i> <span class="control-text">Hide selected nodes</span>
         </button>
         <button type="button" class="show-hide-option" data-action="restore-hidden" disabled
-                title="Bring back removed and hidden nodes that pass the current p-value filter">
-            <i class="fa fa-trash-arrow-up" aria-hidden="true"></i> <span class="control-text">Return hidden nodes</span>
+                title="Bring back hidden nodes that pass the current p-value filter">
+            <i class="fa fa-eye" aria-hidden="true"></i> <span class="control-text">Return hidden nodes</span>
         </button>
         <button type="button" class="show-hide-option" data-action="hide-labels" aria-pressed="false"
                 title="Hide or show the node labels">
             <i class="fa fa-tag" aria-hidden="true"></i> <span class="control-text">Hide labels</span>
         </button>
         <button type="button" class="show-hide-option" data-action="reset-graph"
-                title="Restore removed nodes, filters, labels, layout and zoom">
+                title="Restore hidden nodes, filters, labels, layout and zoom">
             <i class="fa fa-rotate-left" aria-hidden="true"></i> <span class="control-text">Reset graph</span>
         </button>
         <div class="tools-status" aria-live="polite"></div>
@@ -407,16 +406,16 @@ body {
 
         let labelsVisible = true;
 
-        // Nodes the user has removed. Tracked as a set of ids rather than
-        // cy.remove()'d so "Reset graph" can bring them back without rebuilding
-        // the graph, and so the colour scale -- computed once below over every
-        // node -- does not shift under the user as they remove things.
-        const removedIds = new Set();
+        // Nodes the user has hidden. Tracked as a set of ids rather than
+        // cy.remove()'d so they can be brought back without rebuilding the graph,
+        // and so the colour scale -- computed once below over every node -- does
+        // not shift under the user as they hide things.
+        const hiddenIds = new Set();
 
         // Set by the one-off hide actions, cleared by any full recompute -- which
         // is exactly when those hides stop being in effect. Lets "Return hidden
         // nodes" know there is something to undo even though manual hides, unlike
-        // removals, are not tracked individually.
+        // hides, are not tracked individually.
         let manualHideActive = false;
 
         // No vertical flip here. There used to be one, labelled "flip the graph
@@ -726,7 +725,7 @@ body {
                 <div style="padding:8px 16px; cursor:pointer;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.selectNeighbors()">Select first neighbors</div>
                 <div style="padding:8px 16px; cursor:pointer;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.selectDescendants()">Select descendants</div>
                 <div style="border-top:1px solid #eee; margin:4px 0;"></div>
-                <div style="padding:8px 16px; cursor:pointer; color:#a00;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.removeNode()">Remove node</div>
+                <div style="padding:8px 16px; cursor:pointer; color:#a00;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='white'" onclick="window.hideNode()">Hide node</div>
             `;
 
             contextMenu.style.display = 'block';
@@ -768,14 +767,14 @@ body {
             contextMenu.style.display = 'none';
         };
 
-        // Removing acts on the whole selection when the right-clicked node is part
-        // of it, so "select descendants -> remove" stays one gesture rather than n.
-        window.removeNode = function() {
+        // Hiding acts on the whole selection when the right-clicked node is part
+        // of it, so "select descendants -> hide" stays one gesture rather than n.
+        window.hideNode = function() {
             if (selectedNode) {
                 const targets = selectedNode.selected()
                     ? cy.nodes(':selected')
                     : selectedNode;
-                targets.forEach(node => removedIds.add(node.id()));
+                targets.forEach(node => hiddenIds.add(node.id()));
                 targets.unselect();
                 applyVisibility();
                 syncViewControls();
@@ -960,12 +959,12 @@ body {
             return keep;
         }
 
-        // Removed nodes are hidden after every recompute rather than during it.
+        // Tracked hides are re-applied after every recompute rather than during it.
         // applyVisibility() rebuilds the view from scratch on each call, so a
-        // removal that was only applied once would be undone by the next slider
+        // hide that was only applied once would be undone by the next slider
         // move -- which is exactly what happens to "Hide selected" today.
-        function hideRemoved() {
-            removedIds.forEach(id => {
+        function reapplyHidden() {
+            hiddenIds.forEach(id => {
                 const node = cy.getElementById(id);
                 node.style('display', 'none');
                 node.connectedEdges().style('display', 'none');
@@ -1003,10 +1002,10 @@ body {
         // otherwise dragging the slider to maximum stringency would flood the
         // view with every node instead of narrowing to none.
         function applyVisibility(allowFallback = false) {
-            // Removed nodes are excluded up front, not just hidden at the end, so
+            // Hidden nodes are excluded up front, not just hidden at the end, so
             // collectAncestors() cannot route a surviving node's path to the root
             // through something the user deleted.
-            const kept = cy.nodes().filter(node => !removedIds.has(node.id()));
+            const kept = cy.nodes().filter(node => !hiddenIds.has(node.id()));
 
             let passing = kept.filter(node => {
                 const p = getP(node);
@@ -1022,7 +1021,7 @@ body {
                 if (passing.length === 0) {
                     cy.nodes().style('display', 'element');
                     cy.edges().style('display', 'element');
-                    hideRemoved();
+                    reapplyHidden();
                     manualHideActive = false;
                     return;
                 }
@@ -1032,7 +1031,7 @@ body {
                 ? collectAncestors(passing)
                 : new Set(passing.map(node => node.id()));
             showOnly(ids);
-            hideRemoved();
+            reapplyHidden();
 
             // Recomputing from scratch has just wiped any manual hides.
             manualHideActive = false;
@@ -1078,21 +1077,21 @@ body {
                 if (text) text.textContent = labelText;
             });
 
-            // Removing nothing is not an action; say so rather than no-opping.
+            // Hiding nothing is not an action; say so rather than no-opping.
             const anySelected = cy.nodes(':selected').nonempty();
-            document.querySelectorAll('button[data-action="remove-selected"]')
+            document.querySelectorAll('button[data-action="hide-selected"]')
                 .forEach(el => { el.disabled = !anySelected; });
 
-            // Enabled whenever there is something to bring back: tracked removals,
-            // or a one-off hide that the next recompute has not yet swept away.
-            const anythingHidden = removedIds.size > 0 || manualHideActive;
+            // Enabled whenever there is something to bring back: tracked hides, or
+            // a one-off hide that the next recompute has not yet swept away.
+            const anythingHidden = hiddenIds.size > 0 || manualHideActive;
             document.querySelectorAll('button[data-action="restore-hidden"]')
                 .forEach(el => { el.disabled = !anythingHidden; });
 
-            const count = removedIds.size;
+            const count = hiddenIds.size;
             document.querySelectorAll('.tools-status').forEach(el => {
                 el.textContent = count
-                    ? `${count} node${count === 1 ? '' : 's'} removed`
+                    ? `${count} node${count === 1 ? '' : 's'} hidden`
                     : '';
             });
         }
@@ -1186,16 +1185,7 @@ body {
                         cy.nodes(':unselected').style('display', 'none');
                         // Also hide edges connected to hidden nodes
                         cy.nodes(':unselected').connectedEdges().style('display', 'none');
-                        hideRemoved(); // a removed node must not reappear by being selected
-                        manualHideActive = true;
-                        syncViewControls();
-                        break;
-
-                    case 'hide-selected':
-                        // Hide all selected nodes
-                        cy.nodes(':selected').style('display', 'none');
-                        // Also hide edges connected to hidden nodes
-                        cy.nodes(':selected').connectedEdges().style('display', 'none');
+                        reapplyHidden(); // a hidden node must not reappear by being selected
                         manualHideActive = true;
                         syncViewControls();
                         break;
@@ -1214,7 +1204,7 @@ body {
                             }
                         });
 
-                        hideRemoved(); // "all" means all that are left, not the removed ones
+                        reapplyHidden(); // "all" means all that are left, not the hidden ones
                         break;
 
                     case 'hide-labels':
@@ -1223,10 +1213,10 @@ body {
                         syncViewControls();
                         break;
 
-                    case 'remove-selected': {
+                    case 'hide-selected': {
                         const selected = cy.nodes(':selected');
                         if (selected.empty()) break;
-                        selected.forEach(node => removedIds.add(node.id()));
+                        selected.forEach(node => hiddenIds.add(node.id()));
                         selected.unselect();
                         applyVisibility();
                         syncViewControls();
@@ -1240,7 +1230,7 @@ body {
                         // threshold, so nodes return only if they pass it, and
                         // transient hides from "Hide selected" are swept up in
                         // the same pass. Selection is deliberately left untouched.
-                        removedIds.clear();
+                        hiddenIds.clear();
                         applyVisibility();
                         syncViewControls();
                         break;
@@ -1249,7 +1239,7 @@ body {
                         // The opening state, without a page reload. View-only:
                         // the Settings modal's server-side analysis parameters
                         // are deliberately untouched.
-                        removedIds.clear();
+                        hiddenIds.clear();
                         cy.elements().unselect();
 
                         // Guard: if the opening layout never settled we have no
