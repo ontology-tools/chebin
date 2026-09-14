@@ -91,6 +91,25 @@
   font-weight: bold;
 }
 
+.legend-scale {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.legend-scale select {
+  font: inherit;
+  padding: 1px 2px;
+  margin-right: 4px;
+}
+
+.legend-scale input {
+  font: inherit;
+  padding: 1px 2px;
+  width: 4.5em;
+}
+
 #p-filter {
   position: absolute;
   right: 0;
@@ -328,6 +347,18 @@ body {
             </div>
         </div>
         <p class="text-muted">(−log₁₀ scale)</p>
+        <!-- Relative: darkest = smallest p in this graph. Absolute: darkest = p ≤ 1e-cap
+             for every graph, so separate runs set to the same cap compare by colour. -->
+        <div class="legend-scale">
+            <label for="colour-scale-mode">Scale</label>
+            <select id="colour-scale-mode" autocomplete="off"
+                    title="Relative: darkest colour is the smallest p-value in this graph. Absolute: darkest colour is a fixed p-value, the same in every graph.">
+                <option value="relative" selected>Relative</option>
+                <option value="absolute">Absolute</option>
+            </select>
+            <label for="colour-scale-cap" title="Absolute scale: p-values at or below this are drawn darkest">p ≤ 1e-</label>
+            <input type="number" id="colour-scale-cap" min="0.1" max="300" step="any" value="4" autocomplete="off" disabled>
+        </div>
     </div>
 
     <!-- Client-side view filter. Distinct from the p-value threshold in the
@@ -529,39 +560,25 @@ body {
         // Colouring
         /////////
 
-        const colourScaleMode = 'relative'; // 'absolute' or 'relative'
+        // 'relative' saturates at the smallest p-value in this graph; 'absolute'
+        // saturates at a fixed p <= 10^-cap, so graphs from different runs set to
+        // the same cap give equal p-values equal colours. Switched live from the
+        // legend's control; the page always opens relative and nothing is remembered.
+        let colourScaleMode = 'relative'; // 'absolute' or 'relative'
 
-        const absoluteMaxExponent = 4; // Color saturation point: p >= 1e-maxExponent all map to max significance
+        // Largest -log10(p) in the data. Kept apart from the colour saturation
+        // point: the p-value filter slider spans the data, whatever the colour mode.
+        let dataMaxExponent = 0;
+        cy.nodes().forEach(node => {
+            const p = getP(node);
+            if (p != null && p > 0) {
+                dataMaxExponent = Math.max(dataMaxExponent, -Math.log10(p));
+            }
+        });
 
-        if (colourScaleMode === 'relative') {
-            // Determine max exponent from data
-            var maxExponent = 0;
-            cy.nodes().forEach(node => {
-                const p = getP(node);
-                if (p != null && p > 0) {
-                    const exponent = -Math.log10(p);
-                    if (exponent > maxExponent) {
-                        maxExponent = exponent;
-                    }
-                }
-            });
-        } else if (colourScaleMode === 'absolute') {
-            var maxExponent = absoluteMaxExponent;
-        } else {
-            throw new Error("Invalid colour scale mode");
-        }
-
-        // Update legend
-        document.getElementById('legend-max').textContent =
-            `High (p ≤ ${Math.pow(10, -maxExponent).toExponential(1) })`;
-
-        const titleDiv = document.getElementById('legend-title');
-
-        if (colourScaleMode === 'relative') {
-            titleDiv.innerHTML = '<h4 class="mb-1">Significance (relative)</h4>';
-        } else {
-            titleDiv.innerHTML = '<h4 class="mb-1">Significance</h4>';
-        }
+        // Colour saturation point: p <= 10^-maxExponent all map to max significance.
+        // Set by recolour(); also read by the legend in image exports.
+        let maxExponent = dataMaxExponent;
 
 
 
@@ -586,26 +603,73 @@ body {
             return `rgb(${r},${g},${b})`;
         }
 
-        // Update node colors based on p-value
         const colorLow = "#ca3900";
         const colorHigh = "#ffffff";
 
-        cy.nodes().forEach(node => {
-            const p = getP(node);
+        // Colour every node and update the legend for the given scale. Only colours
+        // change -- no refetch, no relayout -- so it is cheap enough to run live.
+        function recolour(mode, capExponent) {
+            if (mode !== 'relative' && mode !== 'absolute') {
+                throw new Error("Invalid colour scale mode");
+            }
+            colourScaleMode = mode;
+            maxExponent = mode === 'relative' ? dataMaxExponent : capExponent;
 
-            let color = "lightgrey"; // default color
+            document.getElementById('legend-max').textContent =
+                `High (p ≤ ${Math.pow(10, -maxExponent).toExponential(1)})`;
+            document.getElementById('legend-title').innerHTML = '<h4 class="mb-1">Significance</h4>';
 
-            if (p != null) {
-                const exponent = -Math.log10(p);
-                let t = exponent / maxExponent;
-                t = 1 - t; // Invert t so that low p-values are high t
-                t = Math.max(0, Math.min(1, t)); // Clamp t between 0 and 1
+            // One redraw for the whole pass rather than one per node.
+            cy.batch(() => {
+                cy.nodes().forEach(node => {
+                    const p = getP(node);
 
-                color = interpolateColor(colorLow, colorHigh, t);
-      }
+                    let color = "lightgrey"; // default color
 
-            node.style('background-color', color);
+                    if (p != null) {
+                        const exponent = -Math.log10(p);
+                        // Every p = 1 leaves nothing to scale against.
+                        let t = maxExponent > 0 ? exponent / maxExponent : 0;
+                        t = 1 - t; // Invert t so that low p-values are high t
+                        t = Math.max(0, Math.min(1, t)); // Clamp t between 0 and 1
+
+                        color = interpolateColor(colorLow, colorHigh, t);
+                    }
+
+                    node.style('background-color', color);
+                });
+            });
+        }
+
+        const scaleModeSelect = document.getElementById('colour-scale-mode');
+        const scaleCapInput = document.getElementById('colour-scale-cap');
+        // The cap the relative scale is using, rounded for the input box. Falls back
+        // to 1e-4 when the graph has no significance to start from (every p = 1).
+        const relativeCapExponent = () =>
+            dataMaxExponent > 0 ? Number(dataMaxExponent.toFixed(1)) : 4;
+
+        function applyScaleControls() {
+            const absolute = scaleModeSelect.value === 'absolute';
+            scaleCapInput.disabled = !absolute;
+            const cap = parseFloat(scaleCapInput.value);
+            // Leave the colours alone while the cap is half-typed or invalid.
+            if (absolute && !(cap > 0)) return;
+            recolour(scaleModeSelect.value, cap);
+        }
+        scaleModeSelect.addEventListener('change', () => {
+            // Switching to absolute starts from the relative scale's cap, so the
+            // colours do not jump; the user adjusts the cap from there.
+            if (scaleModeSelect.value === 'absolute') {
+                scaleCapInput.value = relativeCapExponent();
+            }
+            applyScaleControls();
         });
+        scaleCapInput.addEventListener('input', applyScaleControls);
+
+        // Browsers can restore form values on reload; the page always opens relative.
+        scaleModeSelect.value = 'relative';
+        scaleCapInput.value = relativeCapExponent();
+        applyScaleControls();
 
 
         // Node hover tooltip.
@@ -788,7 +852,7 @@ body {
         // exported image's height, instead of fixed pixel sizes — so the legend
         // stays proportional whether the exported graph is tiny or huge.
         function computeLegendLayout(imgHeight) {
-            const titleText = colourScaleMode === 'relative' ? 'Significance (relative)' : 'Significance';
+            const titleText = 'Significance';
             const highLabel = `High (p ≤ ${Math.pow(10, -maxExponent).toExponential(1)})`;
             const lowLabel = 'Low';
             const captionText = '(−log₁₀ scale)';
@@ -1049,7 +1113,7 @@ body {
         // orders of magnitude spread evenly instead of bunching near zero.
         // Span at least to p = 0.01 so the control stays usable on datasets whose
         // best p-value is weak.
-        const sliderMax = Math.max(Math.ceil(maxExponent), 2);
+        const sliderMax = Math.max(Math.ceil(dataMaxExponent), 2);
         slider.max = sliderMax;
         document.getElementById('p-filter-max').textContent =
             `p = ${Math.pow(10, -sliderMax).toExponential(0)}`;

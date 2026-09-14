@@ -294,6 +294,26 @@ body:has(.graph-wrapper) .site-footer {
   font-weight: bold;
 }
 
+/* Relative/absolute colour-scale switch under the legend. */
+.legend-scale {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.legend-scale select {
+  font: inherit;
+  padding: 1px 2px;
+  margin-right: 4px;
+}
+
+.legend-scale input {
+  font: inherit;
+  padding: 1px 2px;
+  width: 4.5em;
+}
+
 /* ============================================================
    p-value threshold filter (graph page)
    ============================================================ */
