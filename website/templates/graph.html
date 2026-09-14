@@ -1177,7 +1177,7 @@
                             <input class="form-check-input" type="radio" name="background" id="background_human" value="human"
                             {% if background == 'human' %} checked {% endif %}>
                             <label class="form-check-label" for="background_human">
-                                Homo sapiens-based background 1
+                                Homo sapiens-based background - broad
                             </label>
                             <button type="button" class="btn btn-sm ms-2 info-button" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Human-measured entities" data-bs-content="Based on data derived from the Human Metabolome Database (HMDB) and LOTUS (taxonomy = Homo sapiens) and is thus only based on entities that have been measured in human samples.">
                                 🛈
@@ -1187,7 +1187,7 @@
                             <input class="form-check-input" type="radio" name="background" id="background_endogenous_human" value="endogenous_human"
                             {% if background == 'endogenous_human' %} checked {% endif %}>
                             <label class="form-check-label" for="background_endogenous_human">
-                                Homo sapiens-based background 2
+                                Homo sapiens-based background - narrow
                             </label>
                             <button type="button" class="btn btn-sm ms-2 info-button" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Human-synthesised entities" data-bs-content="Based on data derived from Recon3D (from BiGG Models) that only contains metabolites that are guaranteed to have genetic machinery to be synthesised in the human body, unlike the broader Homo sapiens background, which also includes externally-sourced human-associated compounds (eg drugs, diet).">
                                 🛈
@@ -1207,7 +1207,7 @@
                             <input class="form-check-input" type="checkbox" name="expand_background" id="expand_background" value="true"
                             {% if expand_background %} checked {% endif %}>
                             <label class="form-check-label" for="expand_background">
-                                If using a narrow background, expand it if some study-set leaves are not included
+                                If using a restricted background, expand it if some study-set leaves are not included
                             </label>
                         </div>
                     </div>

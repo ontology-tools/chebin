@@ -562,7 +562,7 @@ def run_narrow_background_enrichment_analysis(
         classification: Classification type for enrichment analysis ("structural", "functional", or "full").
         narrow_background_leaves_json: Path to a narrow-background leaves JSON file
             (e.g. data/human_entities_leaves.json, data/arabidopsis_thaliana_leaves.json,
-            or data/recon3d_leaves.json). Defaults to the first Homo sapiens background
+            or data/recon3d_leaves.json). Defaults to the broad Homo sapiens background
             (human_entities_leaves.json) in the configured data folder.
         expand_background: If True (default), study-set leaves that fall outside the
             narrow background are added to the background too, so every input compound
@@ -886,7 +886,7 @@ def run_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy(
         classification: Classification type for enrichment analysis ("structural", "functional", or "full").
         narrow_background_leaves_json: Path to a narrow-background leaves JSON file
             (e.g. data/human_entities_leaves.json, data/arabidopsis_thaliana_leaves.json,
-            or data/recon3d_leaves.json). Defaults to the first Homo sapiens background
+            or data/recon3d_leaves.json). Defaults to the broad Homo sapiens background
             (human_entities_leaves.json) in the configured data folder.
         expand_background: If True (default), study-set leaves that fall outside the
             narrow background are added to the background too, so every input compound

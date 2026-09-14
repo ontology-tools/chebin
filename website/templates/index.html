@@ -15,7 +15,7 @@
         <p>Here, you can submit your study set for enrichment analysis based on the <a href="https://www.ebi.ac.uk/chebi/" style="color: #0f808d; text-decoration: none;">ChEBI ontology</a>. </p>
         <h4 class="mb-4">Input Study Set</h4>
 
-        <p>The input molecular entities should either be in ChEBI ID format (e.g. CHEBI:16236) or as SMILES (e.g. C2H6O).</p>
+        <p>The input molecular entities should either be in ChEBI ID format (e.g. CHEBI:16236) or as SMILES (e.g. CCO).</p>
         <p>A combination of both is allowed.</p>
         <p><strong>Example submission format:</strong>
             <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about accepted ChEBI ID formats and separators" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" data-bs-html="true" title="Accepted formats" data-bs-content="ChEBI IDs are recognised however they are written, so a list copied from another tool does not have to be reformatted first: <code>CHEBI:16236</code>, <code>chebi:16236</code>, <code>ChEBI:16236</code>, <code>CHEBI_16236</code>, <code>CHEBI 16236</code>, <code>CHEBI ID: 16236</code>, the bare number <code>16236</code> and the full IRI all mean the same entity.<br><br>Entities can be separated by a new line, a comma, a space or a tab, mixed freely; repeated separators, trailing commas and blank lines are ignored.">
@@ -100,8 +100,8 @@ CHEBI:46816	0.7465
                 <label>
                     <input type="radio" name="background" value="human" class="form-check-input">
                 </label>
-                <label class="form-check-label">Homo sapiens-based background 1</label>
-               <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about the first Homo sapiens background" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Human-measured entities" data-bs-content="Based on data derived from the Human Metabolome Database (HMDB) and LOTUS (taxonomy = Homo sapiens) and is thus only based on entities that have been measured in human samples.">
+                <label class="form-check-label"><i>Homo sapiens</i>-based background - broad</label>
+               <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about the broad Homo sapiens background" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Human-measured entities" data-bs-content="Based on data derived from the Human Metabolome Database (HMDB) and LOTUS (taxonomy = Homo sapiens) and is thus only based on entities that have been measured in human samples.">
                     🛈
                 </button>
             </div>
@@ -109,8 +109,8 @@ CHEBI:46816	0.7465
                 <label>
                     <input type="radio" name="background" value="endogenous_human" class="form-check-input">
                 </label>
-                <label class="form-check-label">Homo sapiens-based background 2</label>
-               <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about the second Homo sapiens background" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Human-synthesised entities" data-bs-content="Based on data derived from Recon3D (from BiGG Models) that only contains metabolites that are guaranteed to have genetic machinery to be synthesised in the human body, unlike the broader Homo sapiens background, which also includes externally-sourced human-associated compounds (eg drugs, diet).">
+                <label class="form-check-label"><i>Homo sapiens</i>-based background - narrow</label>
+               <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about the narrow Homo sapiens background" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Endogeneous entities" data-bs-content="Based on data derived from Recon3D (from BiGG Models) that only contains metabolites that are guaranteed to have genetic machinery to be synthesised in the human body, unlike the broader Homo sapiens background, which also includes externally-sourced human-associated compounds (eg drugs, diet).">
                     🛈
                 </button>
             </div>
@@ -118,7 +118,7 @@ CHEBI:46816	0.7465
                 <label>
                     <input type="radio" name="background" value="arabidopsis_thaliana" class="form-check-input">
                 </label>
-                <label class="form-check-label">Arabidopsis thaliana-based background</label>
+                <label class="form-check-label"><i>Arabidopsis thaliana</i>-based background</label>
                <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about the Arabidopsis thaliana background" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Arabidopsis thaliana related entities" data-bs-content="Based on data from LOTUS (taxonomy = Arabidopsis thaliana) which is based on entities that have been measured in Arabidopsis thaliana samples.">
                     🛈
                 </button>
@@ -128,7 +128,7 @@ CHEBI:46816	0.7465
         <div class="mb-3">
             <div class="form-check">
                 <input type="checkbox" name="expand_background" value="true" id="expand_background" checked class="form-check-input">
-                <label for="expand_background" class="form-check-label">If using a narrow background, expand it if some study-set leaves are not included</label>
+                <label for="expand_background" class="form-check-label">If using a restricted background, expand it if some study-set leaves are not included</label>
             </div>
         </div>
 
@@ -179,10 +179,10 @@ CHEBI:46816	0.7465
         </h4>
         <div class="collapse" id="background-info">
 
-            <p><strong>Homo sapiens-based background 1</strong></p>
+            <p><strong>Homo sapiens-based background - broad</strong></p>
             <p>Based on data derived from the Human Metabolome Database (HMDB) and LOTUS (taxonomy = Homo sapiens) and is thus only based on entities that have been measured in human samples.</p>
 
-            <p><strong>Homo sapiens-based background 2</strong></p>
+            <p><strong>Homo sapiens-based background - narrow</strong></p>
             <p>Based on data derived from Recon3D (from BiGG Models) that only contains metabolites that are guaranteed to have genetic machinery to be synthesized in the human body, unlike the broader Homo sapiens background, which also includes externally-sourced human-associated compounds (e.g. drugs, diet). </p>
 
             <p><strong>Arabidopsis thaliana-based background</strong></p>
@@ -198,8 +198,8 @@ CHEBI:46816	0.7465
         <div class="collapse" id="data-updates-info">
             <p>Since the ChEBI ontology is continuously updated, monthly re-downloads of the data is automatically executed on the first of each month. The date of the last update is stated at the bottom right of the page. Observe that each update may affect the enrichment analysis results.
             </p>
-            <p><strong>Data used to build the narrow backgrounds</strong></p>
-            <p>The <a href="https://adafede.github.io/dioxus/lotus-explore-rs/?download=true&format=csv&lang=en&taxon=%2A" style="color: #0f808d; text-decoration: none;">LOTUS</a> data that is used for two of the narrow backgrounds is also re-downloaded together with the ontology. The data used from <a href="https://hmdb.ca/downloads?__cf_chl_f_tk=PKzA5S4Zu3B1eBTzecaAyljzuobbAYBpOpJhsI4ypYk-1783003779-1.0.1.1-tnAXv3O9XdikrbXh_8lgUqmCen.q.0l8xku7hzxTndY" style="color: #0f808d; text-decoration: none;">HMDB</a> was released on 2021-11-17, and the <a href="http://bigg.ucsd.edu/models/Recon3D" style="color: #0f808d; text-decoration: none;">Recon3D</a> model is from 2019-10-31.</p>
+            <p><strong>Data used to build the restricted backgrounds</strong></p>
+            <p>The <a href="https://adafede.github.io/dioxus/lotus-explore-rs/?download=true&format=csv&lang=en&taxon=%2A" style="color: #0f808d; text-decoration: none;">LOTUS</a> data that is used for two of the restricted backgrounds is also re-downloaded together with the ontology. The data used from <a href="https://hmdb.ca/downloads?__cf_chl_f_tk=PKzA5S4Zu3B1eBTzecaAyljzuobbAYBpOpJhsI4ypYk-1783003779-1.0.1.1-tnAXv3O9XdikrbXh_8lgUqmCen.q.0l8xku7hzxTndY" style="color: #0f808d; text-decoration: none;">HMDB</a> was released on 2021-11-17, and the <a href="http://bigg.ucsd.edu/models/Recon3D" style="color: #0f808d; text-decoration: none;">Recon3D</a> model is from 2019-10-31.</p>
         </div>
 
         <div class="home-logo">

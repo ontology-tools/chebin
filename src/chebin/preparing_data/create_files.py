@@ -128,7 +128,7 @@ What deleting each file costs:
   is deliberately re-fetched each time, because it is updated continuously.)
 - `hmdb_metabolites.xml` -- **this is the one to keep.** It cannot be downloaded
   automatically. If you delete it you have to fetch 'All Metabolites' again by hand from
-  https://hmdb.ca/downloads, and until you do, the first Homo sapiens background
+  https://hmdb.ca/downloads, and until you do, the broad Homo sapiens background
   (`human_entities_leaves.json`) is skipped on the next run.
 
 The pipeline looks for `hmdb_metabolites.xml` here and in the data folder itself, so
@@ -266,7 +266,7 @@ def create_all_files_with_backup(data_folder="data"):
     create_temp_data_folder(new_data_folder=data_folder_new)
 
     # Carry the HMDB XML over to the new folder before the rename, if we have it.
-    # It is optional: without it, create_all_files simply skips the first human
+    # It is optional: without it, create_all_files simply skips the broad human
     # background (see the warning it prints).
     # The HMDB XML is the only input worth carrying across: ChEBI, Recon3D and the LOTUS
     # CSVs are re-downloaded on every run anyway, but this one was placed by hand and
@@ -552,12 +552,12 @@ def create_all_files(data_folder="data"):
         leaves_inchikeys_csv,
     )
 
-    ### The first human background combines HMDB with LOTUS Homo sapiens, so without the
+    ### The broad human background combines HMDB with LOTUS Homo sapiens, so without the
     ### HMDB XML the whole LOTUS Homo sapiens chain would produce files nothing reads.
     ### Skip it all together rather than paying for the download and the matching.
     if not hmdb_xml_exists:
         print(
-            "HMDB XML file not found. Skipping the first human background "
+            "HMDB XML file not found. Skipping the broad human background "
             "(HMDB + LOTUS Homo sapiens) and everything feeding into it.",
         )
     else:

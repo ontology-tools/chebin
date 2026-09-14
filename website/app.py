@@ -44,16 +44,16 @@ set_data_dir(os.path.join(BASE_DIR, "data"))
 
 # Human-readable names for the backgrounds, used when one is unavailable.
 BACKGROUND_LABELS = {
-    "human": "Homo sapiens-based background 1",
+    "human": "Homo sapiens-based background - broad",
     "arabidopsis_thaliana": "Arabidopsis thaliana-based background",
-    "endogenous_human": "Homo sapiens-based background 2",
+    "endogenous_human": "Homo sapiens-based background - narrow",
 }
 
 
 def _missing_background_file(background):
-    """Path of the leaves JSON a narrow background needs, if it isn't on disk.
+    """Path of the leaves JSON a restricted background needs, if it isn't on disk.
 
-    Some backgrounds are optional in the data pipeline: the first human background is
+    Some backgrounds are optional in the data pipeline: the broad human background is
     only built when the HMDB XML was present, so a local data folder may legitimately
     lack it. Checked per request rather than at import, since the file appears as soon
     as the pipeline is re-run.
@@ -435,7 +435,7 @@ def run_analysis():
 
     background = session.get("background")
 
-    # Initialize expanded leaves/parents tracking (for narrow backgrounds)
+    # Initialize expanded leaves/parents tracking (for restricted backgrounds)
     leaves_to_expand_background = set()
     parents_to_expand_background = set()
 

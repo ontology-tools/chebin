@@ -291,7 +291,7 @@ preparation steps to obtain all the necessary files are needed) or run
 
    Output: `data/human_entities_leaves.json`
 
-## Narrow background for a single Wikidata taxon (e.g. Arabidopsis thaliana)
+## Restricted background for a single Wikidata taxon (e.g. Arabidopsis thaliana)
 
 This is the same workflow as above, but since there is only one source
 (Wikidata), steps 3, 4, and 6 (HMDB extraction/filtering and combining datasets)
@@ -333,5 +333,5 @@ Run `src/chebin/preparing_data/BiGG/get_model.py`. This:
    unresolved.
 
 Output: `data/recon3d_leaves.json` (same `narrow_leaves` JSON shape as the other
-narrow backgrounds above, so it plugs into the website as
+restricted backgrounds above, so it plugs into the website as
 `NARROW_BACKGROUND_LEAVES_JSON['endogenous_human']` without further changes).

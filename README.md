@@ -77,7 +77,7 @@ Before running the function, one input has to be supplied by hand:
 `hmdb_metabolites.xml` (the 'All Metabolites' export from
 [HMDB](https://hmdb.ca/downloads)), placed in `data/` or `data/source_files/`.
 Without it, `create_all_files` still runs and prints a warning, but skips the
-first Homo sapiens background (HMDB + LOTUS) and everything that depends on it.
+broad Homo sapiens background (HMDB + LOTUS) and everything that depends on it.
 
 Once it finishes, `data_folder` (`data/` by default) holds everything the
 enrichment functions read directly; the `source_files/` and
@@ -147,8 +147,8 @@ Four independent choices combine to give the full name:
 
   | Background                                | `narrow_background_leaves_json` |
   | ----------------------------------------- | ------------------------------- |
-  | Homo sapiens 1 (LOTUS + HMDB) --- default | `"human"`                       |
-  | Homo sapiens 2 (Recon3D)                  | `"endogenous_human"`            |
+  | Homo sapiens broad (LOTUS + HMDB) --- default | `"human"`                   |
+  | Homo sapiens narrow (Recon3D)                 | `"endogenous_human"`        |
   | Arabidopsis thaliana                      | `"arabidopsis_thaliana"`        |
 
   An explicit path to a leaves JSON also still works (e.g. a custom background
@@ -225,14 +225,14 @@ what a call looks like.
   | `run_weighted_enrichment_analysis_plain_enrich_pruning_strategy`                               | ChEBI IDs + weights                   | whole ontology | plain strategy | `(results, graph)`                                                                                |
   | `run_weighted_enrichment_analysis_from_smiles`                                                 | SMILES + weights + pruning options    | whole ontology | manual         | `(results, graph, smiles_diagnostics)`                                                            |
   | `run_weighted_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles`                   | SMILES + weights                      | whole ontology | plain strategy | `(results, graph, smiles_diagnostics)`                                                            |
-  | `run_narrow_background_enrichment_analysis`                                                    | ChEBI IDs + pruning options           | narrow         | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
-  | `run_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy`                      | ChEBI IDs                             | narrow         | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
-  | `run_narrow_background_enrichment_analysis_from_smiles`                                        | SMILES + pruning options              | narrow         | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
-  | `run_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles`          | SMILES                                | narrow         | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
-  | `run_weighted_narrow_background_enrichment_analysis`                                           | ChEBI IDs + weights + pruning options | narrow         | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
-  | `run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy`             | ChEBI IDs + weights                   | narrow         | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
-  | `run_weighted_narrow_background_enrichment_analysis_from_smiles`                               | SMILES + weights + pruning options    | narrow         | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
-  | `run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles` | SMILES + weights                      | narrow         | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
+  | `run_narrow_background_enrichment_analysis`                                                    | ChEBI IDs + pruning options           | restricted     | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
+  | `run_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy`                      | ChEBI IDs                             | restricted     | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
+  | `run_narrow_background_enrichment_analysis_from_smiles`                                        | SMILES + pruning options              | restricted     | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
+  | `run_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles`          | SMILES                                | restricted     | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
+  | `run_weighted_narrow_background_enrichment_analysis`                                           | ChEBI IDs + weights + pruning options | restricted     | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
+  | `run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy`             | ChEBI IDs + weights                   | restricted     | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background)`                     |
+  | `run_weighted_narrow_background_enrichment_analysis_from_smiles`                               | SMILES + weights + pruning options    | restricted     | manual         | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
+  | `run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles` | SMILES + weights                      | restricted     | plain strategy | `(results, graph, leaves_to_expand_background, parents_to_expand_background, smiles_diagnostics)` |
 
 All are importable directly from `chebin`, e.g.
 `from chebin import run_weighted_narrow_background_enrichment_analysis_from_smiles`.
@@ -392,12 +392,12 @@ the target of enrichment:
 `"structural"` (the default), **Role** is `"functional"`, and **Both** is
 `"full"`.)
 
-A narrower, more specific background can also be used. For each narrow
+A restricted, more specific background can also be used. For each restricted
 background, a set of leaf classes is specified using external sources, as
 explained below. All the ancestor classes of those leaves in the ChEBI ontology
 then form the background population, so only a subset of the ontology is used.
 
-#### Human background 1 (LOTUS and HMDB)
+#### Human background - broad (LOTUS and HMDB)
 
 Compounds from HMDB and LOTUS (taxonomy = Homo sapiens) were mapped to ChEBI
 leaf classes to serve as a background for enrichment. These are entities that
@@ -417,10 +417,10 @@ ChEBI hierarchy, i.e. this should represent the most specific class. Where a
 matched ChEBI ID corresponded to a non-leaf class in the ontology, it was
 expanded to its leaf descendants; classes with more than 150 leaf descendants
 were excluded to prevent high-level classes from disproportionately inflating
-the background. The resulting set of leaf classes was used to form the narrow
+the background. The resulting set of leaf classes was used to form the restricted
 background for the enrichment analysis.
 
-#### Human background 2 (Recon3D)
+#### Human background - narrow (Recon3D)
 
 A second, narrower human background was built from
 [Recon3D](http://bigg.ucsd.edu/models/Recon3D), a genome-scale reconstruction of
@@ -460,7 +460,7 @@ background.
 #### Arabidopsis thaliana Background
 
 This background also uses data from LOTUS but with taxonomy = *Arabidopsis
-thaliana*. Mapping was done in the same way as for the first human background.
+thaliana*. Mapping was done in the same way as for the broad human background.
 
 ### Correction Method
 

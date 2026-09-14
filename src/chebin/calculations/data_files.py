@@ -21,12 +21,12 @@ CLASS_TO_ALL_ROLES_MAP = "class_to_all_roles_map.json"
 ROLES_TO_LEAVES_MAP = "roles_to_leaves_map.json"
 ID_TO_NAME_MAP = "chebi_id_to_name_map.json"
 
-#: Default narrow background: the first Homo sapiens background (HMDB + LOTUS).
+#: Default restricted background: the broad Homo sapiens background (HMDB + LOTUS).
 #: Optional -- create_all_files only builds it when the HMDB XML is present.
 HUMAN_ENTITIES_LEAVES = "human_entities_leaves.json"
 
-#: Short names for the available narrow backgrounds, mapped to their leaves JSON
-#: filename (relative to the data folder). Shared by the narrow-background
+#: Short names for the available restricted backgrounds, mapped to their leaves JSON
+#: filename (relative to the data folder). Shared by the restricted-background
 #: run_* functions and the website, so there's one place that knows the mapping.
 NARROW_BACKGROUND_LEAVES = {
     "human": HUMAN_ENTITIES_LEAVES,
@@ -36,7 +36,7 @@ NARROW_BACKGROUND_LEAVES = {
 
 
 def resolve_narrow_background_leaves_json(value: str | None) -> str:
-    """Resolve a narrow-background selector to a leaves JSON path.
+    """Resolve a restricted-background selector to a leaves JSON path.
 
     ``value`` may be a short name from :data:`NARROW_BACKGROUND_LEAVES`
     (``"human"``, ``"arabidopsis_thaliana"``, ``"endogenous_human"``), an
