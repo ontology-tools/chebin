@@ -145,11 +145,11 @@ Four independent choices combine to give the full name:
   restricted background (see [Background](#background)). Choose which by passing
   `narrow_background_leaves_json`:
 
-  | Background                                | `narrow_background_leaves_json` |
-  | ----------------------------------------- | ------------------------------- |
-  | Homo sapiens broad (LOTUS + HMDB) --- default | `"human"`                   |
-  | Homo sapiens narrow (Recon3D)                 | `"endogenous_human"`        |
-  | Arabidopsis thaliana                      | `"arabidopsis_thaliana"`        |
+  | Background                                    | `narrow_background_leaves_json` |
+  | --------------------------------------------- | ------------------------------- |
+  | Homo sapiens broad (LOTUS + HMDB) --- default | `"human"`                       |
+  | Homo sapiens narrow (Recon3D)                 | `"endogenous_human"`            |
+  | Arabidopsis thaliana                          | `"arabidopsis_thaliana"`        |
 
   An explicit path to a leaves JSON also still works (e.g. a custom background
   for another taxon) --- the three short names above are just a convenience for
@@ -417,8 +417,8 @@ ChEBI hierarchy, i.e. this should represent the most specific class. Where a
 matched ChEBI ID corresponded to a non-leaf class in the ontology, it was
 expanded to its leaf descendants; classes with more than 150 leaf descendants
 were excluded to prevent high-level classes from disproportionately inflating
-the background. The resulting set of leaf classes was used to form the restricted
-background for the enrichment analysis.
+the background. The resulting set of leaf classes was used to form the
+restricted background for the enrichment analysis.
 
 #### Human background - narrow (Recon3D)
 
