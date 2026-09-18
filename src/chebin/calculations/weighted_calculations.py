@@ -1217,13 +1217,17 @@ def run_weighted_enrichment_analysis_from_smiles(
 
     Returns:
         tuple: (results_dict, pruned_graph, smiles_diagnostics) where
-            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
+            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...],
+            "invalid_structures": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = (
-        smiles_weights_to_chebi_weights(
-            smiles_weights,
-            use_parents=use_parents,
-        )
+    (
+        weights_dict,
+        unresolved_smiles,
+        ambiguous_matches,
+        invalid_structures,
+    ) = smiles_weights_to_chebi_weights(
+        smiles_weights,
+        use_parents=use_parents,
     )
     results, pruned_G = run_weighted_enrichment_analysis(weights_dict, **kwargs)
     return (
@@ -1232,6 +1236,7 @@ def run_weighted_enrichment_analysis_from_smiles(
         {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_matches": ambiguous_matches,
+            "invalid_structures": invalid_structures,
         },
     )
 
@@ -1438,13 +1443,17 @@ def run_weighted_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
 
     Returns:
         tuple: (results_dict, graph, smiles_diagnostics) where smiles_diagnostics
-            is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
+            is {"unresolved_smiles": [...], "ambiguous_matches": [...],
+            "invalid_structures": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = (
-        smiles_weights_to_chebi_weights(
-            smiles_weights,
-            use_parents=use_parents,
-        )
+    (
+        weights_dict,
+        unresolved_smiles,
+        ambiguous_matches,
+        invalid_structures,
+    ) = smiles_weights_to_chebi_weights(
+        smiles_weights,
+        use_parents=use_parents,
     )
     results, G = run_weighted_enrichment_analysis_plain_enrich_pruning_strategy(
         weights_dict,
@@ -1456,6 +1465,7 @@ def run_weighted_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
         {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_matches": ambiguous_matches,
+            "invalid_structures": invalid_structures,
         },
     )
 
@@ -1681,13 +1691,17 @@ def run_weighted_narrow_background_enrichment_analysis_from_smiles(
     Returns:
         tuple: (results_dict, pruned_graph, leaves_to_expand_background,
             parents_to_expand_background, smiles_diagnostics) where
-            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
+            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...],
+            "invalid_structures": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = (
-        smiles_weights_to_chebi_weights(
-            smiles_weights,
-            use_parents=use_parents,
-        )
+    (
+        weights_dict,
+        unresolved_smiles,
+        ambiguous_matches,
+        invalid_structures,
+    ) = smiles_weights_to_chebi_weights(
+        smiles_weights,
+        use_parents=use_parents,
     )
     (
         results,
@@ -1703,6 +1717,7 @@ def run_weighted_narrow_background_enrichment_analysis_from_smiles(
         {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_matches": ambiguous_matches,
+            "invalid_structures": invalid_structures,
         },
     )
 
@@ -1914,13 +1929,17 @@ def run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_stra
     Returns:
         tuple: (results_dict, graph, leaves_to_expand_background,
             parents_to_expand_background, smiles_diagnostics) where
-            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
+            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...],
+            "invalid_structures": [...]}.
     """
-    weights_dict, unresolved_smiles, ambiguous_matches = (
-        smiles_weights_to_chebi_weights(
-            smiles_weights,
-            use_parents=use_parents,
-        )
+    (
+        weights_dict,
+        unresolved_smiles,
+        ambiguous_matches,
+        invalid_structures,
+    ) = smiles_weights_to_chebi_weights(
+        smiles_weights,
+        use_parents=use_parents,
     )
     (
         results,
@@ -1939,5 +1958,6 @@ def run_weighted_narrow_background_enrichment_analysis_plain_enrich_pruning_stra
         {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_matches": ambiguous_matches,
+            "invalid_structures": invalid_structures,
         },
     )

@@ -192,15 +192,18 @@ Four independent choices combine to give the full name:
   resolved to ChEBI ID(s) the same way described in [Study Set](#study-set),
   plus a `use_parents: bool = False` parameter (fall back to predicted parent
   classes when a structure has no direct ChEBI match if set to `True`). An input
-  is read as an InChI when it starts with `InChI=`, and as a SMILES otherwise; a
-  bare InChIKey is not accepted, since it is a hash with no recoverable
-  structure. Returns everything the ChEBI-ID version does, plus one extra dict:
-  `{"unresolved_smiles": [...], "ambiguous_matches": [...]}`.
+  is read as an InChI when it starts with `InChI=`, and as a SMILES otherwise.
+  Returns everything the ChEBI-ID version does, plus one extra dict:
+  `{"unresolved_smiles": [...], "ambiguous_matches": [...], "invalid_structures": [...]}`.
   `unresolved_smiles` is the plain list of inputs that resolved to no ChEBI
-  class at all. An *ambiguous match* is the opposite problem --- a structure
-  that matched several ChEBI classes at once. Only one of them enters the study
-  set (the lowest ChEBI ID, so the same input always resolves the same way), and
-  the runners-up are reported here rather than silently dropped:
+  class at all. `invalid_structures` is the subset of those that RDKit could not
+  read as a molecule in the first place. 
+  These are reported but dropped.
+  An *ambiguous match* is the opposite
+  problem --- a structure that matched several ChEBI classes at once. Only one
+  of them enters the study set (the lowest ChEBI ID, so the same input always
+  resolves the same way), and the runners-up are reported here rather than
+  silently dropped:
 
   ```python
   {"smiles": "CCO", "chosen": "CHEBI:16236", "alternatives": ["CHEBI:17246"]}

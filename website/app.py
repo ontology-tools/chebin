@@ -175,9 +175,19 @@ def parse_studyset(studyset: str):
     weights_dict = {}
     unresolved_smiles = []
     ambiguous_smiles_matches = []
+    unrecognised_entries = []
+    lookup_degraded = False
+
+    def diagnostics():
+        return {
+            "unresolved_smiles": unresolved_smiles,
+            "ambiguous_smiles_matches": ambiguous_smiles_matches,
+            "unrecognised_entries": unrecognised_entries,
+            "lookup_degraded": lookup_degraded,
+        }
 
     if not studyset:
-        return studyset_list, weights_dict, unresolved_smiles, ambiguous_smiles_matches
+        return studyset_list, weights_dict, diagnostics()
 
     def normalize_id(raw_id: str) -> str:
         """Fold the ChEBI ID spellings users type into the single CHEBI_12345 form.
@@ -209,6 +219,41 @@ def parse_studyset(studyset: str):
 
     use_parents = session.get("smiles_option") == "use_parents"
 
+    def resolve_structure(entry):
+        """Resolve one SMILES/InChI entry, recording why it failed if it did.
+
+        An entry RDKit can't read is a typo rather than a gap in ChEBI, so it is
+        reported separately from a valid structure ChEBI simply doesn't have.
+        """
+        nonlocal lookup_degraded
+        chebi_ids, was_resolved, ambiguous_match, failure_reason = (
+            convert_smiles_to_chebi(entry, use_parents=use_parents)
+        )
+        if not was_resolved:
+            if failure_reason == "invalid_structure":
+                unrecognised_entries.append(entry)
+            else:
+                unresolved_smiles.append(entry)
+                lookup_degraded = lookup_degraded or (
+                    failure_reason == "lookup_unavailable"
+                )
+        record_ambiguous(entry, ambiguous_match)
+        return chebi_ids
+
+    def resolve_identifier(entry):
+        """Normalize a non-structure entry, or None if it isn't an identifier.
+
+        normalize_id passes anything unrecognised straight through, which used to
+        put junk into the study set to be dropped silently downstream; returning
+        None instead lets the caller report it back to the user.
+        """
+        if to_chebi_curie(entry) is None and not entry.startswith(
+            ("http://", "https://"),
+        ):
+            unrecognised_entries.append(entry)
+            return None
+        return normalize_id(entry)
+
     # Split by lines first to support optional weights per line
     for line in studyset.splitlines():
         line = line.strip()
@@ -225,42 +270,29 @@ def parse_studyset(studyset: str):
         if weight is not None:
             # Check if first part is SMILES
             if is_smiles(parts[0]):
-                chebi_ids, was_resolved, ambiguous_match = convert_smiles_to_chebi(
-                    parts[0],
-                    use_parents=use_parents,
-                )
-                if not was_resolved:
-                    unresolved_smiles.append(parts[0])
-                record_ambiguous(parts[0], ambiguous_match)
                 # Apply the same weight to all resulting ChEBI IDs
-                for chebi_id in chebi_ids:
+                for chebi_id in resolve_structure(parts[0]):
                     class_id = normalize_id(chebi_id)
                     studyset_list.append(class_id)
                     weights_dict[class_id] = weight
             else:
-                class_id = normalize_id(parts[0])
-                studyset_list.append(class_id)
-                weights_dict[class_id] = weight
+                class_id = resolve_identifier(parts[0])
+                if class_id is not None:
+                    studyset_list.append(class_id)
+                    weights_dict[class_id] = weight
             continue
 
         # Fallback: treat all parts as IDs without weights
         for part in parts:
             if is_smiles(part):
-                chebi_ids, was_resolved, ambiguous_match = convert_smiles_to_chebi(
-                    part,
-                    use_parents=use_parents,
-                )
-                if not was_resolved:
-                    unresolved_smiles.append(part)
-                record_ambiguous(part, ambiguous_match)
-                for chebi_id in chebi_ids:
-                    class_id = normalize_id(chebi_id)
-                    studyset_list.append(class_id)
+                for chebi_id in resolve_structure(part):
+                    studyset_list.append(normalize_id(chebi_id))
             else:
-                class_id = normalize_id(part)
-                studyset_list.append(class_id)
+                class_id = resolve_identifier(part)
+                if class_id is not None:
+                    studyset_list.append(class_id)
 
-    return studyset_list, weights_dict, unresolved_smiles, ambiguous_smiles_matches
+    return studyset_list, weights_dict, diagnostics()
 
 
 def map_p_value_correction_method(method_name):
@@ -286,9 +318,7 @@ def run_analysis():
     if not raw_studyset:
         return redirect(url_for("submission"))
     # Convert multi-line or comma-separated input into a list
-    studyset_list, weights_dict, unresolved_smiles, ambiguous_smiles_matches = (
-        parse_studyset(raw_studyset)
-    )
+    studyset_list, weights_dict, smiles_diagnostics = parse_studyset(raw_studyset)
 
     # Auto-scale weights if present (only scales up if max < 1000)
     # if weights_dict:
@@ -374,15 +404,13 @@ def run_analysis():
                 "method": "plain_enrich",
             }
 
-            session["unresolved_smiles"] = unresolved_smiles
-            session["ambiguous_smiles_matches"] = ambiguous_smiles_matches
+            session.update(smiles_diagnostics)
 
             return render_template(
                 "results.html",
                 results=results,
                 graph_json_file=graph_json_file,
-                unresolved_smiles=unresolved_smiles,
-                ambiguous_smiles_matches=ambiguous_smiles_matches,
+                **smiles_diagnostics,
                 smiles_option=session.get("smiles_option"),
                 expand_background=session.get("expand_background", True),
                 background=session.get("background", "full"),
@@ -422,15 +450,13 @@ def run_analysis():
                 "method": "plain_enrich",
             }
 
-            session["unresolved_smiles"] = unresolved_smiles
-            session["ambiguous_smiles_matches"] = ambiguous_smiles_matches
+            session.update(smiles_diagnostics)
 
             return render_template(
                 "results.html",
                 results=results,
                 graph_json_file=graph_json_file,
-                unresolved_smiles=unresolved_smiles,
-                ambiguous_smiles_matches=ambiguous_smiles_matches,
+                **smiles_diagnostics,
                 smiles_option=session.get("smiles_option"),
                 leaves_to_expand_background=leaves_to_expand_background,
                 parents_to_expand_background=parents_to_expand_background,
@@ -546,15 +572,13 @@ def run_analysis():
         "zero_degree_prune": zero_degree_prune,
     }
 
-    session["unresolved_smiles"] = unresolved_smiles
-    session["ambiguous_smiles_matches"] = ambiguous_smiles_matches
+    session.update(smiles_diagnostics)
 
     return render_template(
         "results.html",
         results=results,
         graph_json_file=graph_json_file,
-        unresolved_smiles=unresolved_smiles,
-        ambiguous_smiles_matches=ambiguous_smiles_matches,
+        **smiles_diagnostics,
         smiles_option=session.get("smiles_option"),
         leaves_to_expand_background=leaves_to_expand_background,
         parents_to_expand_background=parents_to_expand_background,

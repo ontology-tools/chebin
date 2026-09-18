@@ -709,9 +709,15 @@ def run_enrichment_analysis_from_smiles(
 
     Returns:
         tuple: (results_dict, pruned_graph, smiles_diagnostics) where
-            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
+            smiles_diagnostics is {"unresolved_smiles": [...], "ambiguous_matches": [...],
+            "invalid_structures": [...]}.
     """
-    studyset_list, unresolved_smiles, ambiguous_matches = smiles_list_to_studyset(
+    (
+        studyset_list,
+        unresolved_smiles,
+        ambiguous_matches,
+        invalid_structures,
+    ) = smiles_list_to_studyset(
         smiles_list,
         use_parents=use_parents,
     )
@@ -722,6 +728,7 @@ def run_enrichment_analysis_from_smiles(
         {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_matches": ambiguous_matches,
+            "invalid_structures": invalid_structures,
         },
     )
 
@@ -967,9 +974,15 @@ def run_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
 
     Returns:
         tuple: (results_dict, graph, smiles_diagnostics) where smiles_diagnostics
-            is {"unresolved_smiles": [...], "ambiguous_matches": [...]}.
+            is {"unresolved_smiles": [...], "ambiguous_matches": [...],
+            "invalid_structures": [...]}.
     """
-    studyset_list, unresolved_smiles, ambiguous_matches = smiles_list_to_studyset(
+    (
+        studyset_list,
+        unresolved_smiles,
+        ambiguous_matches,
+        invalid_structures,
+    ) = smiles_list_to_studyset(
         smiles_list,
         use_parents=use_parents,
     )
@@ -983,6 +996,7 @@ def run_enrichment_analysis_plain_enrich_pruning_strategy_from_smiles(
         {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_matches": ambiguous_matches,
+            "invalid_structures": invalid_structures,
         },
     )
 

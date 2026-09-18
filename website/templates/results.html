@@ -26,6 +26,31 @@
 <h3 class="mt-4 mb-3">Enrichment Analysis Results</h3>
 <p>Removed classes are specified below the results table.</p>
 
+{% if unrecognised_entries or lookup_degraded %}
+<div class="alert alert-warning" role="alert">
+    <h4 class="alert-heading">Not everything you submitted was analysed</h4>
+    {% if unrecognised_entries %}
+    {% set n = unrecognised_entries | length %}
+    <p class="mb-0">
+        {{ n }} entr{{ 'y' if n == 1 else 'ies' }} could not be read as a ChEBI ID,
+        SMILES or InChI, so {{ 'it was' if n == 1 else 'they were' }} left out of the
+        results below. See
+        <a href="#unrecognised-entries" class="alert-link">Unrecognised entries</a>
+        underneath the results table to check for typos.
+    </p>
+    {% endif %}
+    {% if lookup_degraded %}
+    <p class="mb-0 {{ 'mt-2' if unrecognised_entries }}">
+        Some structures could not be looked up because the Chebifier service could not
+        be reached, so the results may be incomplete. See
+        <a href="#unresolved-structures" class="alert-link">the list underneath the
+        results table</a> &mdash; those structures may be fine, so it is worth trying
+        again later.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
 <a href="#" id="downloadCsv" class="btn btn-teal"
     style="margin:20px 5px 20px 0;">
     Download Results (CSV)
@@ -104,8 +129,19 @@
 {% endfor %}
 </ul>
 {% endif %}
+{% if unrecognised_entries %}
+<p class="muted-log" id="unrecognised-entries"><strong>Unrecognised entries</strong> (not a valid ChEBI ID, SMILES or InChI — please check for typos):</p>
+<ul class="muted-log" style="margin-left: 20px;">
+{% for entry in unrecognised_entries %}
+    <li>{{ entry }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if lookup_degraded %}
+<p class="muted-log" id="unresolved-structures"><strong>Some lookups could not reach the Chebifier service</strong>, so results may be incomplete. The structures listed below may be fine — try again later.</p>
+{% endif %}
 {% if unresolved_smiles and smiles_option == 'use_parents' %}
-<p class="muted-log"><strong>Unresolved SMILES or InChI</strong> (could not find ChEBI ID or parents):</p>
+<p class="muted-log"><strong>Unresolved SMILES or InChI</strong> (valid structure, but no ChEBI entry or predicted parents found):</p>
 <ul class="muted-log" style="margin-left: 20px;">
 {% for smiles in unresolved_smiles %}
     <li>{{ smiles }}</li>
@@ -113,7 +149,7 @@
 </ul>
 {% endif %}
 {% if unresolved_smiles and smiles_option == 'exclude' %}
-<p class="muted-log"><strong>Excluded SMILES or InChI</strong> (unmapped, not included in analysis):</p>
+<p class="muted-log"><strong>Excluded SMILES or InChI</strong> (valid structure, but no ChEBI entry — not included in analysis):</p>
 <ul class="muted-log" style="margin-left: 20px;">
 {% for smiles in unresolved_smiles %}
     <li>{{ smiles }}</li>

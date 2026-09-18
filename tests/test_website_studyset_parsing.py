@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from chebin.calculations import smiles_lookup
+
 WEBSITE_DIR = Path(__file__).resolve().parents[1] / "website"
 
 
@@ -66,53 +68,56 @@ def parse(website_app):
     ],
 )
 def test_every_id_format_reaches_the_study_set(parse, text):
-    studyset, weights, unresolved, ambiguous = parse(text)
+    studyset, weights, diagnostics = parse(text)
     assert studyset == ["CHEBI_17079"]
     assert weights == {}
-    assert unresolved == []
-    assert ambiguous == []
+    assert diagnostics["unresolved_smiles"] == []
+    assert diagnostics["ambiguous_smiles_matches"] == []
+    assert diagnostics["unrecognised_entries"] == []
 
 
 def test_mixed_formats_in_one_submission(parse):
-    studyset, _, _, _ = parse("CHEBI:17079\nchebi:46816\nCHEBI ID: 31463\n28426")
+    studyset, _, _ = parse("CHEBI:17079\nchebi:46816\nCHEBI ID: 31463\n28426")
     assert studyset == ["CHEBI_17079", "CHEBI_46816", "CHEBI_31463", "CHEBI_28426"]
 
 
 def test_weights_survive_a_spaced_prefix(parse):
     """The weight column still lines up once "CHEBI ID: 17079" is one token."""
-    studyset, weights, _, _ = parse("CHEBI ID: 17079\t0.7665\nchebi:46816 0.7465")
+    studyset, weights, _ = parse("CHEBI ID: 17079\t0.7665\nchebi:46816 0.7465")
     assert studyset == ["CHEBI_17079", "CHEBI_46816"]
     assert weights == {"CHEBI_17079": 0.7665, "CHEBI_46816": 0.7465}
 
 
 def test_bare_ids_with_weights(parse):
-    studyset, weights, _, _ = parse("17079 0.7665")
+    studyset, weights, _ = parse("17079 0.7665")
     assert studyset == ["CHEBI_17079"]
     assert weights == {"CHEBI_17079": 0.7665}
 
 
 def test_two_bare_ids_are_not_an_id_and_a_weight(parse):
     """Ambiguous on its own, and read as IDs: a weight has to be a decimal here."""
-    studyset, weights, _, _ = parse("17079 17080")
+    studyset, weights, _ = parse("17079 17080")
     assert studyset == ["CHEBI_17079", "CHEBI_17080"]
     assert weights == {}
 
 
 def test_comma_separated_bare_ids(parse):
-    studyset, weights, _, _ = parse("17079, 17080, 17081")
+    studyset, weights, _ = parse("17079, 17080, 17081")
     assert studyset == ["CHEBI_17079", "CHEBI_17080", "CHEBI_17081"]
     assert weights == {}
 
 
 def test_prefixed_id_keeps_a_whole_number_weight(parse):
     """With a prefix there is no ambiguity, so an integer weight still counts."""
-    studyset, weights, _, _ = parse("CHEBI:17079 2")
+    studyset, weights, _ = parse("CHEBI:17079 2")
     assert studyset == ["CHEBI_17079"]
     assert weights == {"CHEBI_17079": 2.0}
 
 
 def test_blank_input(parse):
-    assert parse("   \n\n  ") == ([], {}, [], [])
+    studyset, weights, diagnostics = parse("   \n\n  ")
+    assert (studyset, weights) == ([], {})
+    assert not any(diagnostics[key] for key in diagnostics)
 
 
 GLUCOSE_INCHI = (
@@ -137,3 +142,41 @@ def test_commas_still_separate_non_inchi_entries(website_app):
         "CHEBI:17079",
         "17080",
     ]
+
+
+def test_unreadable_structure_is_reported_not_analysed(parse, monkeypatch):
+    """The reported crash: an unreadable SMILES used to be sent to Chebifier."""
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("made a network call")
+
+    monkeypatch.setattr(smiles_lookup.requests, "post", forbidden)
+
+    studyset, _, diagnostics = parse("CHEBI:17079\nCCO=OOOO")
+    assert studyset == ["CHEBI_17079"]
+    assert diagnostics["unrecognised_entries"] == ["CCO=OOOO"]
+    assert diagnostics["unresolved_smiles"] == []
+
+
+def test_junk_entry_is_reported_rather_than_silently_dropped(parse):
+    """`Xx99` is neither a ChEBI ID nor a structure; it used to vanish."""
+    studyset, _, diagnostics = parse("CHEBI:17079, Xx99")
+    assert studyset == ["CHEBI_17079"]
+    assert diagnostics["unrecognised_entries"] == ["Xx99"]
+
+
+def test_iris_are_still_accepted(parse):
+    """The unrecognised check must not reject an IRI: ChEBI's folds to its ID, and a
+    non-ChEBI one keeps normalize_id's documented pass-through."""
+    studyset, _, diagnostics = parse(
+        "http://purl.obolibrary.org/obo/CHEBI_17079\nhttp://example.org/obo/GO_0008150",
+    )
+    assert studyset == ["CHEBI_17079", "http://example.org/obo/GO_0008150"]
+    assert diagnostics["unrecognised_entries"] == []
+
+
+def test_junk_with_a_weight_is_reported_and_carries_no_weight(parse):
+    studyset, weights, diagnostics = parse("Xx99 0.5")
+    assert studyset == []
+    assert weights == {}
+    assert diagnostics["unrecognised_entries"] == ["Xx99"]

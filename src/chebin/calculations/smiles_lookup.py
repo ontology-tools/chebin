@@ -26,6 +26,29 @@ SMILES_INCHIKEY_LOOKUP_CSV = "removed_leaf_classes_with_inchikeys.csv"
 CHEBIFIER_DETAILS_URL = "https://chebifier.hastingslab.org/api/details"
 CHEBIFIER_CLASSIFY_URL = "https://chebifier.hastingslab.org/api/classify"
 
+#: (connect, read) timeouts for the Chebifier calls, so a hung service can't stall
+#: a web request indefinitely.
+CHEBIFIER_TIMEOUT = (5, 30)
+
+
+def _post_chebifier_json(url, payload, label):
+    """POST to Chebifier and return the decoded JSON, or None if that failed.
+
+    Chebifier answers some malformed structures with a 502 HTML error page rather
+    than JSON, so decoding is guarded as well as the request itself: returning None
+    lets the caller report the entry as unresolved instead of raising.
+    """
+    response = None
+    try:
+        response = requests.post(url, json=payload, timeout=CHEBIFIER_TIMEOUT)
+        response.raise_for_status()
+        return response.json()
+    except Exception as error:  # noqa: BLE001
+        print(f"Warning: Chebifier {label} lookup failed: {error}")
+        if response is not None:
+            print(f"{label} response content: {preview(response.content)}")
+        return None
+
 
 def _clean_lookup_value(value):
     if value is None:
@@ -164,10 +187,22 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
     after that keys off the parsed molecule, so both input forms share one cascade.
     A bare InChIKey is not accepted -- it's a hash with no recoverable structure.
 
-    Returns (chebi_ids_list, was_resolved, ambiguous_match). ambiguous_match is
-    None unless the matched SMILES/InChIKey is asserted by more than one ChEBI
-    term in the local lookup table, in which case it's (chosen_chebi_id,
-    all_chebi_ids) so the caller can surface the ambiguity to the user.
+    Returns (chebi_ids_list, was_resolved, ambiguous_match, failure_reason).
+    ambiguous_match is None unless the matched SMILES/InChIKey is asserted by more
+    than one ChEBI term in the local lookup table, in which case it's
+    (chosen_chebi_id, all_chebi_ids) so the caller can surface the ambiguity to the
+    user.
+
+    failure_reason is None when the input resolved, and otherwise says why it did
+    not, so callers can tell the cases apart for the user:
+
+    - ``"invalid_structure"``: RDKit could not read the input as a molecule at all,
+      so it's a typo rather than a gap in ChEBI. No remote call is made for these.
+    - ``"no_chebi_match"``: a valid structure with no ChEBI entry (and no predicted
+      parents, when use_parents is set).
+    - ``"lookup_unavailable"``: Chebifier could not be reached or answered
+      unusably. The structure may well be fine, so it must not be reported as
+      invalid.
 
     use_parents: if no direct ChEBI ID can be found (local table or remote
     lookup), fall back to a remote classification call and use its direct
@@ -218,7 +253,7 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
         print(
             f"Found local ChEBI ID from exact SMILES match: {chosen_id} for SMILES {cleaned_smiles}",
         )
-        return chebi_ids, was_resolved, ambiguous_match
+        return chebi_ids, was_resolved, ambiguous_match, None
 
     # If no direct SMILES match exists, try InChIKey -> ChEBI using RDKit to compute
     # the InChIKey for the submitted SMILES.
@@ -242,27 +277,40 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
                     f"Found local ChEBI ID from InChIKey match: {chosen_id} "
                     f"for SMILES {cleaned_smiles} (InChIKey {user_inchikey})",
                 )
-                return chebi_ids, was_resolved, ambiguous_match
+                return chebi_ids, was_resolved, ambiguous_match, None
     except Exception as error:  # noqa: BLE001
         print(
             f"Warning: failed to compute InChIKey for SMILES {cleaned_smiles}: {error}",
         )
 
+    # Anything RDKit couldn't read is a typo, not a gap in ChEBI, so stop here: the
+    # remote lookups take SMILES and have nothing to offer an unparsable string.
+    # Checked after the local tables so a tabled-but-odd string can still match.
+    if mol is None:
+        print(
+            f"Could not read {'InChI' if is_inchi else 'SMILES'} {cleaned_smiles} "
+            f"as a chemical structure, excluding from analysis.",
+        )
+        return chebi_ids, was_resolved, ambiguous_match, "invalid_structure"
+
     # Get details from ChEBI lookup to check for a direct match to a ChEBI ID.
     # The remote API only accepts SMILES, so an InChI input has to go over the wire
     # as the SMILES RDKit parsed it into.
-    response = requests.post(
+    details = _post_chebifier_json(
         CHEBIFIER_DETAILS_URL,
-        json={
+        {
             "type": "type",
             "smiles": canonical_smiles or cleaned_smiles,
             "selectedModels": {
                 "ChEBI Lookup": True,
             },
         },
+        "details",
     )
+    if details is None:
+        return chebi_ids, was_resolved, ambiguous_match, "lookup_unavailable"
 
-    lookup_model = response.json().get("models", {}).get("ChEBI Lookup", {})
+    lookup_model = details.get("models", {}).get("ChEBI Lookup", {})
 
     # Prefer the API's structured chebi_ids list, falling back to pulling the IDs
     # out of the human-readable highlights text (as of 2026-08 the API's chebi_ids
@@ -299,18 +347,21 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
         print(
             f"No direct ChEBI ID found from lookup for SMILES {cleaned_smiles}, attempting classification...",
         )
-        response = requests.post(
+        classification = _post_chebifier_json(
             CHEBIFIER_CLASSIFY_URL,
-            json={
+            {
                 "smiles": canonical_smiles or cleaned_smiles,
                 "ontology": False,
                 "selectedModels": {
                     "ELECTRA (ChEBI50-3STAR)": True,
                 },
             },
+            "classification",
         )
+        if classification is None:
+            return chebi_ids, was_resolved, ambiguous_match, "lookup_unavailable"
 
-        direct_parents = response.json().get("direct_parents")
+        direct_parents = classification.get("direct_parents")
         if direct_parents:
             # Extract ChEBI IDs from all parent lists
             for parent_list in direct_parents:
@@ -325,7 +376,7 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
                         f"No parents found in one of the classification results for SMILES {cleaned_smiles}",
                     )
                     print(
-                        f"Classification response content: {preview(response.content)}",
+                        f"Classification response content: {preview(classification)}",
                     )
             if chebi_ids:
                 was_resolved = True
@@ -339,7 +390,12 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
             f"No direct ChEBI ID found from lookup for SMILES {cleaned_smiles}, excluding from analysis.",
         )
 
-    return chebi_ids, was_resolved, ambiguous_match
+    return (
+        chebi_ids,
+        was_resolved,
+        ambiguous_match,
+        None if was_resolved else "no_chebi_match",
+    )
 
 
 def is_smiles(value: str) -> bool:
@@ -380,28 +436,35 @@ def smiles_list_to_studyset(smiles_list, use_parents=False):
     IRI, per is_smiles()) are passed through unchanged rather than run through the
     SMILES lookup -- so a list can freely mix SMILES and ChEBI IDs.
 
-    Returns (studyset_list, unresolved_smiles, ambiguous_matches). studyset_list is
-    ready to pass to run_enrichment_analysis and friends -- they normalize ChEBI ID
-    strings to full IRIs themselves via normalize_id().
+    Returns (studyset_list, unresolved_smiles, ambiguous_matches,
+    invalid_structures). studyset_list is ready to pass to run_enrichment_analysis
+    and friends -- they normalize ChEBI ID strings to full IRIs themselves via
+    normalize_id().
+
+    invalid_structures lists the inputs RDKit could not read as a molecule at all,
+    as a subset of unresolved_smiles rather than instead of it, so a caller that
+    only reads unresolved_smiles still sees every input that failed.
     """
     studyset_list = []
     unresolved_smiles = []
     ambiguous_matches = []
+    invalid_structures = []
 
     for entry in smiles_list:
         if not is_smiles(entry):
             studyset_list.append(entry)
             continue
-        chebi_ids, was_resolved, ambiguous_match = convert_smiles_to_chebi(
-            entry,
-            use_parents=use_parents,
+        chebi_ids, was_resolved, ambiguous_match, failure_reason = (
+            convert_smiles_to_chebi(entry, use_parents=use_parents)
         )
         if not was_resolved:
             unresolved_smiles.append(entry)
+            if failure_reason == "invalid_structure":
+                invalid_structures.append(entry)
         _record_ambiguous(ambiguous_matches, entry, ambiguous_match)
         studyset_list.extend(chebi_ids)
 
-    return studyset_list, unresolved_smiles, ambiguous_matches
+    return studyset_list, unresolved_smiles, ambiguous_matches, invalid_structures
 
 
 def smiles_weights_to_chebi_weights(smiles_weights, use_parents=False):
@@ -410,24 +473,28 @@ def smiles_weights_to_chebi_weights(smiles_weights, use_parents=False):
     Keys that are already ChEBI IDs (per is_smiles()) are passed through unchanged
     rather than run through the SMILES lookup -- so a dict can freely mix SMILES
     and ChEBI ID keys. Each SMILES's weight is applied to every ChEBI ID it
-    resolves to. Returns (weights_dict, unresolved_smiles, ambiguous_matches).
+    resolves to. Returns (weights_dict, unresolved_smiles, ambiguous_matches,
+    invalid_structures), with invalid_structures a subset of unresolved_smiles as
+    in smiles_list_to_studyset().
     """
     weights_dict = {}
     unresolved_smiles = []
     ambiguous_matches = []
+    invalid_structures = []
 
     for entry, weight in smiles_weights.items():
         if not is_smiles(entry):
             weights_dict[entry] = weight
             continue
-        chebi_ids, was_resolved, ambiguous_match = convert_smiles_to_chebi(
-            entry,
-            use_parents=use_parents,
+        chebi_ids, was_resolved, ambiguous_match, failure_reason = (
+            convert_smiles_to_chebi(entry, use_parents=use_parents)
         )
         if not was_resolved:
             unresolved_smiles.append(entry)
+            if failure_reason == "invalid_structure":
+                invalid_structures.append(entry)
         _record_ambiguous(ambiguous_matches, entry, ambiguous_match)
         for chebi_id in chebi_ids:
             weights_dict[chebi_id] = weight
 
-    return weights_dict, unresolved_smiles, ambiguous_matches
+    return weights_dict, unresolved_smiles, ambiguous_matches, invalid_structures
