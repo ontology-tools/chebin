@@ -3,7 +3,6 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import glob
-import re
 import time
 import uuid
 
@@ -130,6 +129,24 @@ def submission():
     return render_template("submission.html", user_study_set=None)
 
 
+def _split_entries(line):
+    """Split a study-set line into entries on whitespace and commas.
+
+    Commas separate entries, but an InChI also contains them, so comma-splitting is
+    applied only to tokens that aren't InChIs -- a plain ``[\\s,]+`` split shatters
+    one InChI into six entries. An InChI never contains whitespace, so this leaves it
+    intact; the cost is that InChI entries must be whitespace- or newline-separated
+    rather than comma-separated.
+    """
+    entries = []
+    for token in line.split():
+        if token.startswith("InChI="):
+            entries.append(token)
+        else:
+            entries.extend(part for part in token.split(",") if part)
+    return entries
+
+
 def _line_weight(parts):
     """The weight of a ``<id> <weight>`` study-set line, or None if there isn't one.
 
@@ -202,7 +219,7 @@ def parse_studyset(studyset: str):
         # below would otherwise scatter one ID across several tokens.
         line = collapse_chebi_prefixes(line)
 
-        parts = [p for p in re.split(r"[\s,]+", line) if p]
+        parts = _split_entries(line)
 
         weight = _line_weight(parts)
         if weight is not None:

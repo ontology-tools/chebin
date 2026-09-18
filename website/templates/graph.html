@@ -1263,7 +1263,7 @@
 
                     <!-- P-VALUE CORRECTION METHOD -->
                     <div class="mb-3">
-                        <label for="p_value_correction_method" class="form-label">P-value correction method:</label>
+                        <label for="p_value_correction_method" class="form-label">p-value correction method:</label>
                         <select name="p_value_correction_method" id="p_value_correction_method" class="form-select">
                             <option value="benjamini_hochberg" {% if correction_method.get('benjamini_hochberg_correct') %} selected {% endif %}>Benjamini-Hochberg</option>
                             <option value="bonferroni" {% if correction_method.get('bonferroni_correct') %} selected {% endif %}>Bonferroni</option>
@@ -1330,13 +1330,13 @@
 
                     <!-- SMILES HANDLING OPTIONS -->
                     <div class="mb-3">
-                        <h6>Using SMILES:</h6>
+                        <h6>Using SMILES or InChI:</h6>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="smiles_option" id="smiles_use_parents" value="use_parents"
                             {% if smiles_option == 'use_parents' %} checked {% endif %}>
                             <label class="form-check-label" for="smiles_use_parents">
-                                Use the direct parents of any unmapped SMILES
-                                <button type="button" class="btn btn-sm info-button" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Using predicted parents" data-bs-content="If your results show many nodes with weak enrichment using this option, try excluding unmapped SMILES instead.">
+                                Use the direct parents of any unmapped SMILES or InChI
+                                <button type="button" class="btn btn-sm info-button" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Using predicted parents" data-bs-content="If your results show many nodes with weak enrichment using this option, try excluding unmapped structures instead.">
                                     🛈
                                 </button>
                             </label>
@@ -1345,8 +1345,8 @@
                             <input class="form-check-input" type="radio" name="smiles_option" id="smiles_exclude" value="exclude"
                             {% if smiles_option == 'exclude' %} checked {% endif %}>
                             <label class="form-check-label" for="smiles_exclude">
-                                Exclude any unmapped SMILES
-                                <button type="button" class="btn btn-sm info-button" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Excluding unmapped SMILES" data-bs-content="Unmapped SMILES will be displayed in the results section. Consider manually searching the ChEBI database to identify appropriate IDs.">
+                                Exclude any unmapped SMILES or InChI
+                                <button type="button" class="btn btn-sm info-button" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Excluding unmapped structures" data-bs-content="Unmapped structures will be displayed in the results section. Consider manually searching the ChEBI database to identify appropriate IDs.">
                                     🛈
                                 </button>
                             </label>
@@ -1367,6 +1367,11 @@
     }
     .info-button:hover {
         text-decoration: none;
+    }
+    /* Bootstrap's default is 500px, which wraps several of the longer option
+       labels in this modal onto a second line. */
+    #pruningModal .modal-dialog {
+        max-width: 600px;
     }
 </style>
 

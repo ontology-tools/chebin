@@ -136,10 +136,10 @@ Four independent choices combine to give the full name:
   weights_dict = {"CHEBI:15377": 1.5, "CHEBI:16236": 0.8, "CHEBI:17234": 3.0}
   results, graph = run_weighted_enrichment_analysis(weights_dict)
   ```
-  The `_from_smiles` weighted variants take the same shape with SMILES keys
-  instead (a `{SMILES: weight}` dict), e.g.
-  `{"CC(=O)Oc1ccccc1C(=O)O": 1.5, "CHEBI:16236": 0.8}` --- SMILES and ChEBI ID
-  keys can be mixed freely.
+  The `_from_smiles` weighted variants take the same shape with structure keys
+  instead (a `{SMILES or InChI: weight}` dict), e.g.
+  `{"CC(=O)Oc1ccccc1C(=O)O": 1.5, "CHEBI:16236": 0.8}` --- SMILES, InChI and
+  ChEBI ID keys can be mixed freely.
 
 - **`narrow_background_`** --- the whole ChEBI ontology as background vs. a
   restricted background (see [Background](#background)). Choose which by passing
@@ -187,33 +187,39 @@ Four independent choices combine to give the full name:
   Strategy](#pruning-strategies) vs. manually choosing which pruners to apply
   and when.
 
-- **`_from_smiles`** --- takes SMILES instead of ChEBI IDs (a `list[str]`, or
-  `{SMILES: weight}` for weighted variants), resolved to ChEBI ID(s) the same
-  way described in [Study Set](#study-set), plus a `use_parents: bool = False`
-  parameter (fall back to predicted parent classes when a SMILES has no direct
-  ChEBI match if set to `True`). Returns everything the ChEBI-ID version does,
-  plus one extra dict:
+- **`_from_smiles`** --- takes structures instead of ChEBI IDs (a `list[str]` of
+  SMILES and/or InChI, or `{SMILES or InChI: weight}` for weighted variants),
+  resolved to ChEBI ID(s) the same way described in [Study Set](#study-set),
+  plus a `use_parents: bool = False` parameter (fall back to predicted parent
+  classes when a structure has no direct ChEBI match if set to `True`). An input
+  is read as an InChI when it starts with `InChI=`, and as a SMILES otherwise; a
+  bare InChIKey is not accepted, since it is a hash with no recoverable
+  structure. Returns everything the ChEBI-ID version does, plus one extra dict:
   `{"unresolved_smiles": [...], "ambiguous_matches": [...]}`.
   `unresolved_smiles` is the plain list of inputs that resolved to no ChEBI
-  class at all. An *ambiguous match* is the opposite problem --- a SMILES that
-  matched several ChEBI classes at once. Only one of them enters the study set
-  (the lowest ChEBI ID, so the same input always resolves the same way), and the
-  runners-up are reported here rather than silently dropped:
+  class at all. An *ambiguous match* is the opposite problem --- a structure
+  that matched several ChEBI classes at once. Only one of them enters the study
+  set (the lowest ChEBI ID, so the same input always resolves the same way), and
+  the runners-up are reported here rather than silently dropped:
 
   ```python
   {"smiles": "CCO", "chosen": "CHEBI:16236", "alternatives": ["CHEBI:17246"]}
   ```
 
   so you can check whether the chosen class was the one you meant. This list is
-  usually short, but worth a glance. A mixture of SMILES and ChEBI IDs can be
-  used.
+  usually short, but worth a glance. A mixture of SMILES, InChI and ChEBI IDs
+  can be used. Both the `_smiles` suffix and the `"smiles"` key predate InChI
+  support and are kept for compatibility; each reports whichever form was
+  submitted, so an InChI input is echoed back as the InChI string you passed in,
+  not as the SMILES it was converted to.
 
 The table below shows all the different types of enrichment analysis functions.
 The "manual" rows take the individual pruner toggles as ordinary arguments ---
 see [Shared parameters](#shared-parameters) for the full list, and the
 [manual-pruning
 example](#step-2-quick-example-run-an-analysis-then-export-the-graph) below for
-what a call looks like.
+what a call looks like. Rows whose input is listed as "SMILES" accept InChI in
+the same argument, and either may be mixed with ChEBI IDs.
 
   | Function                                                                                       | Input                                 | Background     | Pruning        | Returns                                                                                           |
   | ---------------------------------------------------------------------------------------------- | ------------------------------------- | -------------- | -------------- | ------------------------------------------------------------------------------------------------- |
@@ -337,15 +343,17 @@ above.
 
 ### Study Set
 
-On the home page, you can enter your study set as ChEBI IDs (one per line) or
-SMILES. You can optionally provide weights for each compound (tab- or
+On the home page, you can enter your study set as ChEBI IDs (one per line),
+SMILES or InChI. You can optionally provide weights for each compound (tab- or
 space-separated).
 
 Entities can be separated by a new line, a comma, a space or a tab, and these
 can be mixed freely (`CHEBI:17079, CHEBI:46816` on one line and `CHEBI:31463` on
-the next is three entities). When submitting weights, give each entity its own
-line: the weight is taken from the second column, so any further entries on the
-same line are ignored.
+the next is three entities). The one exception is InChI, which contains commas
+of its own: an InChI has to be separated by a new line, a space or a tab, since
+a comma-separated InChI would be read as several entities. When submitting
+weights, give each entity its own line: the weight is taken from the second
+column, so any further entries on the same line are ignored.
 
 ChEBI IDs are recognised however they are written, so a list copied from another
 tool does not have to be reformatted first: `CHEBI:17079`, `chebi:17079`,
@@ -358,17 +366,25 @@ of a line whose ID is also a bare number is read as a second ID rather than a
 weight (`17079 17080` is two entities). Write the weight as a decimal, or prefix
 the ID with `CHEBI:`, to submit weights.
 
-If SMILES are used, each SMILES is resolved to a ChEBI ID in this order: (1) an
-exact string match against the local table of ChEBI leaf classes, (2) a match
-via the InChIKey computed from the SMILES, (3) a direct lookup through the
-[Chebifier](https://chebifier.hastingslab.org/) API. If none of these resolve,
-its predicted direct parent classes (also from Chebifier) can optionally be used
-for enrichment calculations instead. Where a SMILES matches several ChEBI
-entries, only one of them is included in the analysis (the lowest ChEBI ID); the
-alternatives are listed on the results page as ambiguous matches. Note that this
-applies to a structure matching several ChEBI terms --- where a SMILES is
-instead resolved to its predicted parent classes, *all* of those parents are
-included.
+An input starting with `InChI=` is read as an InChI and parsed into a molecule
+first; every step below then works from that molecule, so SMILES and InChI share
+one resolution path and the same input structure resolves identically whichever
+form it was written in. A bare InChIKey is not accepted --- it is a hash with no
+recoverable structure, so there is nothing to parse or look up a canonical form
+for.
+
+If SMILES or InChI are used, each structure is resolved to a ChEBI ID in this
+order: (1) an exact string match against the local table of ChEBI leaf classes,
+(2) a match via the InChIKey computed from the structure, (3) a direct lookup
+through the [Chebifier](https://chebifier.hastingslab.org/) API. If none of
+these resolve, its predicted direct parent classes (also from Chebifier) can
+optionally be used for enrichment calculations instead. The Chebifier API
+accepts SMILES only, so an InChI is sent as the canonical SMILES it was parsed
+into. Where a structure matches several ChEBI entries, only one of them is
+included in the analysis (the lowest ChEBI ID); the alternatives are listed on
+the results page as ambiguous matches. Note that this applies to a structure
+matching several ChEBI terms --- where a structure is instead resolved to its
+predicted parent classes, *all* of those parents are included.
 
 When a parent class is included in the study set, it is replaced by all of its
 leaf descendants.

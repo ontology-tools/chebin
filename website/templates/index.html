@@ -15,10 +15,10 @@
         <p>Here, you can submit your study set for enrichment analysis based on the <a href="https://www.ebi.ac.uk/chebi/" style="color: #0f808d; text-decoration: none;">ChEBI ontology</a>. </p>
         <h4 class="mb-4">Input Study Set</h4>
 
-        <p>The input molecular entities should either be in ChEBI ID format (e.g. CHEBI:16236) or as SMILES (e.g. CCO).</p>
-        <p>A combination of both is allowed.</p>
+        <p>The input molecular entities should either be in ChEBI ID format (e.g. CHEBI:16236), as SMILES (e.g. CCO), or as InChI (e.g. InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3).</p>
+        <p>A combination of these is allowed.</p>
         <p><strong>Example submission format:</strong>
-            <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about accepted ChEBI ID formats and separators" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" data-bs-html="true" title="Accepted formats" data-bs-content="ChEBI IDs are recognised however they are written, so a list copied from another tool does not have to be reformatted first: <code>CHEBI:16236</code>, <code>chebi:16236</code>, <code>ChEBI:16236</code>, <code>CHEBI_16236</code>, <code>CHEBI 16236</code>, <code>CHEBI ID: 16236</code>, the bare number <code>16236</code> and the full IRI all mean the same entity.<br><br>Entities can be separated by a new line, a comma, a space or a tab, mixed freely; repeated separators, trailing commas and blank lines are ignored.">
+            <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about accepted ChEBI ID formats and separators" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" data-bs-html="true" title="Accepted formats" data-bs-content="ChEBI IDs are recognised however they are written: <code>CHEBI:16236</code>, <code>chebi:16236</code>, <code>ChEBI:16236</code>, <code>CHEBI_16236</code>, <code>CHEBI 16236</code>, <code>CHEBI ID: 16236</code>, the bare number <code>16236</code> and the full IRI all mean the same entity.<br><br>Entities can be separated by a new line, a comma, a space or a tab, mixed freely; repeated separators, trailing commas and blank lines are ignored.<br><br>The exception is InChI, which contains commas of its own: separate an InChI by a new line, a space or a tab, never by a comma.">
                 🛈
             </button>
         </p>
@@ -37,21 +37,21 @@ CHEBI:17079	0.7665
 CHEBI:46816	0.7465
         </pre>
 
-        <h5 class="mb-4">Using SMILES</h5>
-        <p>If using SMILES, please read the "Using SMILES" section and specify your preference below.</p>
+        <h5 class="mb-4">Using SMILES or InChI</h5>
+        <p>If using SMILES or InChI, please read the respective sections and specify your preference below.</p>
 
         <div class="mb-4" style="margin-left: 20px;">
             <div class="form-check">
                 <input type="radio" name="smiles_option" value="use_parents" id="use_parents" checked class="form-check-input">
-                <label for="use_parents" class="form-check-label">Use the direct parents of any unmapped SMILES</label>
-                <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about using predicted parents" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Using predicted parents" data-bs-content="If your results show many nodes with weak enrichment using this option, try excluding unmapped SMILES instead.">
+                <label for="use_parents" class="form-check-label">Use the direct parents of any unmapped SMILES or InChI</label>
+                <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about using predicted parents" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Using predicted parents" data-bs-content="If your results show many nodes with weak enrichment using this option, try excluding unmapped structures instead.">
                     🛈
                 </button>
             </div>
             <div class="form-check">
                 <input type="radio" name="smiles_option" value="exclude" id="exclude_unmapped" class="form-check-input">
-                <label for="exclude_unmapped" class="form-check-label">Exclude any unmapped SMILES</label>
-                <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about excluding unmapped SMILES" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Excluding unmapped SMILES" data-bs-content="Unmapped SMILES will be displayed in the results section. Consider manually searching the ChEBI database to identify appropriate IDs.">
+                <label for="exclude_unmapped" class="form-check-label">Exclude any unmapped SMILES or InChI</label>
+                <button type="button" class="btn btn-sm ms-2 info-button" aria-label="More information about excluding unmapped structures" style="border: none; background: none; color: #800020; padding: 0;" data-bs-toggle="popover" data-bs-trigger="hover" data-bs-placement="top" title="Excluding unmapped structures" data-bs-content="Unmapped structures will be displayed in the results section. Consider manually searching the ChEBI database to identify appropriate IDs.">
                     🛈
                 </button>
             </div>
@@ -64,7 +64,7 @@ CHEBI:46816	0.7465
 
         <br><br>
         <h4>Specify Target of Enrichment</h4>
-        <p>Read the "Selecting target of enrichment" section for more information.</p>
+        <p>Read the "Target of enrichment" section for more information.</p>
         <div class="mb-3">
             <div class="form-check">
                 <label>
@@ -138,7 +138,7 @@ CHEBI:46816	0.7465
     <aside class="info-container" aria-label="Help and guidance">
         <h4 class="mb-2">
             <button class="btn info-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#target-enrichment-info" aria-expanded="false" aria-controls="target-enrichment-info">
-                <i class="fa fa-chevron-right info-toggle-icon"></i> Selecting target of enrichment
+                <i class="fa fa-chevron-right info-toggle-icon"></i> Target of enrichment
             </button>
         </h4>
         <div class="collapse" id="target-enrichment-info">
@@ -169,6 +169,17 @@ CHEBI:46816	0.7465
                 If a SMILES is not mapped to any ChEBI entity, its direct parent classes can be predicted (this is done with
                 <a href="https://chebifier.hastingslab.org/" style="color: #0f808d; text-decoration: none;">Chebifier</a>)
                 and used for the enrichment analysis. Alternatively, the unmapped SMILES can be completely excluded, depending on the option you select.
+            </p>
+        </div>
+
+        <h4 class="mb-2 mt-3">
+            <button class="btn info-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#using-inchi-info" aria-expanded="false" aria-controls="using-inchi-info">
+                <i class="fa fa-chevron-right info-toggle-icon"></i> Using InChI
+            </button>
+        </h4>
+        <div class="collapse" id="using-inchi-info">
+            <p>To be mapped to a ChEBI entity, an InChI will be converted to a SMILES and then follow the same process as described in the "Using SMILES" section.
+                Please note that InChI strings must be separated by a tab, space or new line, not by a comma (since an InChI contains commas itself).
             </p>
         </div>
 

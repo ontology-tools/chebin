@@ -113,3 +113,27 @@ def test_prefixed_id_keeps_a_whole_number_weight(parse):
 
 def test_blank_input(parse):
     assert parse("   \n\n  ") == ([], {}, [], [])
+
+
+GLUCOSE_INCHI = (
+    "InChI=1S/C6H12O6/c7-1-2-3(8)4(9)5(10)6(11)12-2/h2-11H,1H2/t2-,3-,4+,5-,6?/m1/s1"
+)
+
+
+def test_inchi_is_one_entry(website_app):
+    """An InChI contains commas, so a plain comma split scattered it into six."""
+    assert website_app._split_entries(GLUCOSE_INCHI) == [GLUCOSE_INCHI]
+
+
+def test_inchi_keeps_its_weight_column(website_app):
+    parts = website_app._split_entries(f"{GLUCOSE_INCHI}\t0.5")
+    assert parts == [GLUCOSE_INCHI, "0.5"]
+    assert website_app._line_weight(parts) == 0.5
+
+
+def test_commas_still_separate_non_inchi_entries(website_app):
+    assert website_app._split_entries("CCO, CHEBI:17079,17080") == [
+        "CCO",
+        "CHEBI:17079",
+        "17080",
+    ]

@@ -158,7 +158,11 @@ def _get_local_maps():
 
 
 def convert_smiles_to_chebi(smiles_string, use_parents=False):
-    """Convert a single SMILES string to ChEBI IDs.
+    """Convert a single SMILES or InChI string to ChEBI IDs.
+
+    An ``InChI=``-prefixed input is parsed with RDKit's InChI reader; every lookup
+    after that keys off the parsed molecule, so both input forms share one cascade.
+    A bare InChIKey is not accepted -- it's a hash with no recoverable structure.
 
     Returns (chebi_ids_list, was_resolved, ambiguous_match). ambiguous_match is
     None unless the matched SMILES/InChIKey is asserted by more than one ChEBI
@@ -180,10 +184,18 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
     was_resolved = False
     ambiguous_match = None
     cleaned_smiles = _clean_lookup_value(smiles_string)
+    is_inchi = cleaned_smiles.startswith("InChI=")
     try:
-        mol = Chem.MolFromSmiles(cleaned_smiles)
+        mol = (
+            Chem.MolFromInchi(cleaned_smiles)
+            if is_inchi
+            else Chem.MolFromSmiles(cleaned_smiles)
+        )
     except Exception as error:  # noqa: BLE001
-        print(f"Warning: failed to parse SMILES {cleaned_smiles}: {error}")
+        print(
+            f"Warning: failed to parse {'InChI' if is_inchi else 'SMILES'} "
+            f"{cleaned_smiles}: {error}",
+        )
         mol = None
     canonical_smiles = Chem.MolToSmiles(mol) if mol is not None else None
 
@@ -236,12 +248,14 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
             f"Warning: failed to compute InChIKey for SMILES {cleaned_smiles}: {error}",
         )
 
-    # Get details from ChEBI lookup to check for a direct match to a ChEBI ID
+    # Get details from ChEBI lookup to check for a direct match to a ChEBI ID.
+    # The remote API only accepts SMILES, so an InChI input has to go over the wire
+    # as the SMILES RDKit parsed it into.
     response = requests.post(
         CHEBIFIER_DETAILS_URL,
         json={
             "type": "type",
-            "smiles": cleaned_smiles,
+            "smiles": canonical_smiles or cleaned_smiles,
             "selectedModels": {
                 "ChEBI Lookup": True,
             },
@@ -288,7 +302,7 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
         response = requests.post(
             CHEBIFIER_CLASSIFY_URL,
             json={
-                "smiles": cleaned_smiles,
+                "smiles": canonical_smiles or cleaned_smiles,
                 "ontology": False,
                 "selectedModels": {
                     "ELECTRA (ChEBI50-3STAR)": True,

@@ -105,7 +105,7 @@
 </ul>
 {% endif %}
 {% if unresolved_smiles and smiles_option == 'use_parents' %}
-<p class="muted-log"><strong>Unresolved SMILES</strong> (could not find ChEBI ID or parents):</p>
+<p class="muted-log"><strong>Unresolved SMILES or InChI</strong> (could not find ChEBI ID or parents):</p>
 <ul class="muted-log" style="margin-left: 20px;">
 {% for smiles in unresolved_smiles %}
     <li>{{ smiles }}</li>
@@ -113,7 +113,7 @@
 </ul>
 {% endif %}
 {% if unresolved_smiles and smiles_option == 'exclude' %}
-<p class="muted-log"><strong>Excluded SMILES</strong> (unmapped, not included in analysis):</p>
+<p class="muted-log"><strong>Excluded SMILES or InChI</strong> (unmapped, not included in analysis):</p>
 <ul class="muted-log" style="margin-left: 20px;">
 {% for smiles in unresolved_smiles %}
     <li>{{ smiles }}</li>
@@ -121,7 +121,7 @@
 </ul>
 {% endif %}
 {% if ambiguous_smiles_matches %}
-<p class="muted-log"><strong>Ambiguous SMILES matches</strong> (structure asserted by multiple ChEBI terms — lowest ChEBI ID used):</p>
+<p class="muted-log"><strong>Ambiguous SMILES or InChI matches</strong> (structure asserted by multiple ChEBI terms — lowest ChEBI ID used):</p>
 <ul class="muted-log" style="margin-left: 20px;">
 {% for match in ambiguous_smiles_matches %}
     <li>{{ match.smiles }} &rarr; used {{ match.chosen }} (also asserted by: {{ match.alternatives | join(', ') }})</li>
