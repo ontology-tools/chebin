@@ -10,11 +10,13 @@ import pandas as pd
 import requests
 
 from chebin.calculations.fishers_calculations import normalize_id
+from chebin.calculations.predicted_parents import LEAF_EXPANSION_LIMIT
 
 MODEL_URL_TEMPLATE = "http://bigg.ucsd.edu/static/models/{model_id}.json"
 UNICHEM_URL = "https://www.ebi.ac.uk/unichem/api/v1/compounds"
 UNICHEM_HMDB_SOURCE_ID = 18  # UniChem's source ID for HMDB
-MAX_LEAF_DESCENDANTS = 150  # skip expanding a class this generic, same cutoff as narrow_background_fishers.py
+# Skip expanding a class this generic: the same cutoff as everywhere else.
+MAX_LEAF_DESCENDANTS = LEAF_EXPANSION_LIMIT
 
 
 def normalize_hmdb_id(hmdb_id):

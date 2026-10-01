@@ -26,7 +26,8 @@
 <h3 class="mt-4 mb-3">Enrichment Analysis Results</h3>
 <p>Removed classes are specified below the results table.</p>
 
-{% if unrecognised_entries or lookup_degraded %}
+{% set too_general_excluded = too_general_parent_matches | default([]) | rejectattr('used') | list %}
+{% if unrecognised_entries or lookup_unreachable_entries or lookup_error_entries or too_general_excluded %}
 <div class="alert alert-warning" role="alert">
     <h4 class="alert-heading">Not everything you submitted was analysed</h4>
     {% if unrecognised_entries %}
@@ -39,13 +40,34 @@
         underneath the results table to check for typos.
     </p>
     {% endif %}
-    {% if lookup_degraded %}
+    {% if lookup_unreachable_entries %}
+    {% set n = lookup_unreachable_entries | length %}
     <p class="mb-0 {{ 'mt-2' if unrecognised_entries }}">
-        Some structures could not be looked up because the Chebifier service could not
-        be reached, so the results may be incomplete. See
-        <a href="#unresolved-structures" class="alert-link">the list underneath the
-        results table</a> &mdash; those structures may be fine, so it is worth trying
-        again later.
+        {{ n }} structure{{ '' if n == 1 else 's' }} could not be looked up because the
+        Chebifier service did not respond, so the results may be incomplete. See
+        <a href="#lookup-unreachable" class="alert-link">the list underneath the
+        results table</a> &mdash; {{ 'it is' if n == 1 else 'they are' }} probably
+        fine, so it is worth trying again later.
+    </p>
+    {% endif %}
+    {% if lookup_error_entries %}
+    {% set n = lookup_error_entries | length %}
+    <p class="mb-0 {{ 'mt-2' if unrecognised_entries or lookup_unreachable_entries }}">
+        {{ n }} structure{{ '' if n == 1 else 's' }} could not be looked up because the
+        Chebifier service returned an error, so the results may be incomplete. See
+        <a href="#lookup-error" class="alert-link">the list underneath the results
+        table</a>. Trying again is unlikely to help; if this keeps happening, please
+        let us know.
+    </p>
+    {% endif %}
+    {% if too_general_excluded %}
+    {% set n = too_general_excluded | length %}
+    <p class="mb-0 {{ 'mt-2' if unrecognised_entries or lookup_unreachable_entries or lookup_error_entries }}">
+        {{ n }} structure{{ '' if n == 1 else 's' }} had no ChEBI entry, and every parent
+        class predicted for {{ 'it' if n == 1 else 'them' }} was too general to use, so
+        {{ 'it was' if n == 1 else 'they were' }} left out of the results below. See
+        <a href="#too-general-parents" class="alert-link">the list underneath the
+        results table</a>.
     </p>
     {% endif %}
 </div>
@@ -137,8 +159,21 @@
 {% endfor %}
 </ul>
 {% endif %}
-{% if lookup_degraded %}
-<p class="muted-log" id="unresolved-structures"><strong>Some lookups could not reach the Chebifier service</strong>, so results may be incomplete. The structures listed below may be fine — try again later.</p>
+{% if lookup_unreachable_entries %}
+<p class="muted-log" id="lookup-unreachable"><strong>Chebifier did not respond</strong> (structure probably fine — try again later; not included in analysis):</p>
+<ul class="muted-log" style="margin-left: 20px;">
+{% for smiles in lookup_unreachable_entries %}
+    <li>{{ smiles }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if lookup_error_entries %}
+<p class="muted-log" id="lookup-error"><strong>Chebifier returned an error</strong> (structure may be fine, but it could not be looked up; not included in analysis):</p>
+<ul class="muted-log" style="margin-left: 20px;">
+{% for smiles in lookup_error_entries %}
+    <li>{{ smiles }}</li>
+{% endfor %}
+</ul>
 {% endif %}
 {% if unresolved_smiles and smiles_option == 'use_parents' %}
 <p class="muted-log"><strong>Unresolved SMILES or InChI</strong> (valid structure, but no ChEBI entry or predicted parents found):</p>
@@ -153,6 +188,14 @@
 <ul class="muted-log" style="margin-left: 20px;">
 {% for smiles in unresolved_smiles %}
     <li>{{ smiles }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if too_general_parent_matches %}
+<p class="muted-log" id="too-general-parents"><strong>Predicted parents too general to use</strong> (more than {{ leaf_expansion_limit }} leaf classes, so not expanded):</p>
+<ul class="muted-log" style="margin-left: 20px;">
+{% for match in too_general_parent_matches %}
+    <li>{{ match.smiles }} &rarr; skipped {{ match.skipped | join(', ') }}{% if match.used %}; used {{ match.used | join(', ') }}{% else %}; no other parents, so not included in analysis{% endif %}</li>
 {% endfor %}
 </ul>
 {% endif %}

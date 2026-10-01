@@ -32,6 +32,10 @@ from chebin.calculations.multiple_test_corrections import (
     benjamini_hochberg_fdr_correction,
     bonferroni_correction,
 )
+from chebin.calculations.predicted_parents import (
+    LEAF_EXPANSION_LIMIT,
+    filter_chebifier_parents,
+)
 from chebin.calculations.smiles_lookup import smiles_list_to_studyset
 from chebin.calculations.visualitations_and_pruning import (
     create_graph_with_roles_and_structures,
@@ -50,68 +54,6 @@ from chebin.calculations.visualitations_and_pruning import (
 # For the background, we want to include all classes that are connected to the narrow set (human entities)
 # If the CHEBI_Id is a leaf, we include it (and count is as 1 leaf), and all of its ancetsors.
 # If the CHEBI_Id is not a leaf, we include all of its leaf descendants, and all of its ancestors.
-
-# A seed class with more leaf descendants than this is not expanded into the
-# background, to keep high-level classes from inflating it.
-LEAF_EXPANSION_LIMIT = 150
-
-
-def _calculate_depth_to_root(chebi_iri, parent_map, memo=None):
-    """Recursively calculate depth (path length) from a node to the root.
-
-    Uses memoization to avoid recalculating already-seen nodes.
-    If multiple parents exist, returns the maximum depth among them.
-    """
-    if memo is None:
-        memo = {}
-    if chebi_iri in memo:
-        return memo[chebi_iri]
-
-    parents = parent_map.get(chebi_iri, [])
-    if not parents:
-        memo[chebi_iri] = 0
-        return 0
-
-    # depth = 1 + maximum depth among all parents
-    depth = 1 + max(_calculate_depth_to_root(p, parent_map, memo) for p in parents)
-    memo[chebi_iri] = depth
-    return depth
-
-
-def filter_chebifier_parents(parent_chebis, chebi_parent_map):
-    """If Chebifier finds several parent classes for a given class (that does not have its own CHEBI ID),
-    we want to only keep the parent(s) furthest down the hierarchy, i.e. the one(s) with the longest path to the root.
-    This is to avoid inflating the background with very high-level classes.
-
-    Input: list of parent CHEBI IDs (strings), and the CHEBI parent-child map --
-           either a ready dict or a path to its JSON file. Callers iterating over
-           many entities should load the JSON once and pass the dict, since this
-           function is typically called once per multi-ID entity.
-    Output: list of parent CHEBI IDs (strings) that are furthest down the hierarchy.
-            should only be one parent unless there is a tie
-    """
-
-    if isinstance(chebi_parent_map, str):
-        with open(chebi_parent_map, encoding="utf-8") as f:
-            chebi_parent_map = json.load(f)
-
-    # calculate path length to root for each parent CHEBI ID using memoization
-    memo = {}
-    parent_path_lengths = {
-        p: _calculate_depth_to_root(p, chebi_parent_map, memo) for p in parent_chebis
-    }
-
-    # find the maximum path length
-    max_path_length = max(parent_path_lengths.values())
-
-    # choose the parent(s) with the maximum path length
-    chosen_parents = [
-        parent
-        for parent, path_length in parent_path_lengths.items()
-        if path_length == max_path_length
-    ]
-
-    return chosen_parents
 
 
 def gather_narrow_leaves(

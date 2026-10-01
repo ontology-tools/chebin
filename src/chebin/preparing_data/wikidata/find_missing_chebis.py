@@ -7,6 +7,8 @@ from typing import cast
 import pandas as pd
 import requests
 
+from chebin.calculations.smiles_lookup import CHEBIFIER_CLASSIFY_MODEL
+
 # convert_smiles_to_chebi is a blocking HTTP call to a third-party API, so rows
 # resolve concurrently on a thread pool rather than one at a time. Kept modest
 # to stay a well-behaved client of a service we don't control.
@@ -81,7 +83,7 @@ def convert_smiles_to_chebi(smiles_string):
                 "smiles": smiles_string,
                 "ontology": False,
                 "selectedModels": {
-                    "ELECTRA (ChEBI50-3STAR)": True,
+                    CHEBIFIER_CLASSIFY_MODEL: True,
                 },
             },
         )

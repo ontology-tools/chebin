@@ -50,7 +50,7 @@ def _stub_response(monkeypatch, *, status_error=None, json_error=None):
 @pytest.mark.parametrize("use_parents", [False, True])
 def test_unreadable_input_never_reaches_the_api(no_network, use_parents):
     """RDKit already knows it isn't a molecule, so there is nothing to ask about."""
-    chebi_ids, was_resolved, ambiguous, failure_reason = (
+    chebi_ids, was_resolved, ambiguous, failure_reason, _ = (
         smiles_lookup.convert_smiles_to_chebi(
             INVALID_SMILES,
             use_parents=use_parents,
@@ -63,7 +63,7 @@ def test_unreadable_input_never_reaches_the_api(no_network, use_parents):
 
 
 def test_unreadable_inchi_is_also_invalid(no_network):
-    _, was_resolved, _, failure_reason = smiles_lookup.convert_smiles_to_chebi(
+    _, was_resolved, _, failure_reason, _ = smiles_lookup.convert_smiles_to_chebi(
         "InChI=1S/not-a-real-inchi",
     )
     assert was_resolved is False
@@ -71,24 +71,44 @@ def test_unreadable_inchi_is_also_invalid(no_network):
 
 
 @pytest.mark.parametrize(
-    "kwargs",
+    ("kwargs", "expected_reason"),
     [
-        {"status_error": requests.HTTPError("502 Server Error")},
-        {"json_error": requests.exceptions.JSONDecodeError("Expecting value", "", 0)},
-        {"status_error": requests.Timeout("read timed out")},
+        ({"status_error": requests.HTTPError("502 Server Error")}, "lookup_error"),
+        ({"status_error": requests.HTTPError("400 Client Error")}, "lookup_error"),
+        (
+            {
+                "json_error": requests.exceptions.JSONDecodeError(
+                    "Expecting value",
+                    "",
+                    0,
+                ),
+            },
+            "lookup_error",
+        ),
+        ({"status_error": requests.Timeout("read timed out")}, "lookup_unreachable"),
+        (
+            {"status_error": requests.ConnectionError("connection refused")},
+            "lookup_unreachable",
+        ),
     ],
-    ids=["http-502", "html-body-instead-of-json", "timeout"],
+    ids=["http-502", "http-400", "html-body-instead-of-json", "timeout", "connection"],
 )
-def test_api_failure_degrades_instead_of_raising(monkeypatch, kwargs):
-    """A broken lookup must not be reported as invalid input -- the structure is fine."""
+def test_api_failure_degrades_instead_of_raising(monkeypatch, kwargs, expected_reason):
+    """A broken lookup must not be reported as invalid input -- the structure is fine.
+
+    Whether the service was unreachable or answered with an error is kept apart,
+    since only the first is worth telling the user to retry.
+    """
     _stub_response(monkeypatch, **kwargs)
-    chebi_ids, was_resolved, _, failure_reason = smiles_lookup.convert_smiles_to_chebi(
-        VALID_REMOTE_SMILES,
-        use_parents=True,
+    chebi_ids, was_resolved, _, failure_reason, _ = (
+        smiles_lookup.convert_smiles_to_chebi(
+            VALID_REMOTE_SMILES,
+            use_parents=True,
+        )
     )
     assert chebi_ids == []
     assert was_resolved is False
-    assert failure_reason == "lookup_unavailable"
+    assert failure_reason == expected_reason
 
 
 def test_wrappers_report_invalid_as_a_subset_of_unresolved(no_network):

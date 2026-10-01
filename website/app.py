@@ -14,6 +14,7 @@ from chebin.calculations.fishers_calculations import (
     run_enrichment_analysis,
     run_enrichment_analysis_plain_enrich_pruning_strategy,
 )
+from chebin.calculations.predicted_parents import LEAF_EXPANSION_LIMIT
 from chebin.calculations.smiles_lookup import convert_smiles_to_chebi, is_smiles
 from chebin.calculations.visualitations_and_pruning import graph_to_cytospace_json
 from chebin.calculations.weighted_calculations import (
@@ -30,6 +31,12 @@ from chebin.preparing_data.wikidata.narrow_background_fishers import (
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Replace with a secure secret key
+
+
+@app.context_processor
+def inject_leaf_expansion_limit():
+    return {"leaf_expansion_limit": LEAF_EXPANSION_LIMIT}
+
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.argv[0] = os.path.abspath(
@@ -176,14 +183,22 @@ def parse_studyset(studyset: str):
     unresolved_smiles = []
     ambiguous_smiles_matches = []
     unrecognised_entries = []
-    lookup_degraded = False
+    # Structures Chebifier couldn't look up, kept apart from unresolved_smiles
+    # (genuinely no ChEBI match) because the advice to the user differs: an
+    # unreachable service is worth retrying, an error response usually isn't.
+    lookup_unreachable_entries = []
+    lookup_error_entries = []
+    # Structures whose predicted parents were (partly) too general to expand.
+    too_general_parent_matches = []
 
     def diagnostics():
         return {
             "unresolved_smiles": unresolved_smiles,
             "ambiguous_smiles_matches": ambiguous_smiles_matches,
             "unrecognised_entries": unrecognised_entries,
-            "lookup_degraded": lookup_degraded,
+            "lookup_unreachable_entries": lookup_unreachable_entries,
+            "lookup_error_entries": lookup_error_entries,
+            "too_general_parent_matches": too_general_parent_matches,
         }
 
     if not studyset:
@@ -225,18 +240,28 @@ def parse_studyset(studyset: str):
         An entry RDKit can't read is a typo rather than a gap in ChEBI, so it is
         reported separately from a valid structure ChEBI simply doesn't have.
         """
-        nonlocal lookup_degraded
-        chebi_ids, was_resolved, ambiguous_match, failure_reason = (
+        chebi_ids, was_resolved, ambiguous_match, failure_reason, too_general = (
             convert_smiles_to_chebi(entry, use_parents=use_parents)
         )
+        if too_general:
+            too_general_parent_matches.append(
+                {
+                    "smiles": entry,
+                    "skipped": too_general,
+                    "used": chebi_ids,
+                },
+            )
         if not was_resolved:
             if failure_reason == "invalid_structure":
                 unrecognised_entries.append(entry)
-            else:
+            elif failure_reason == "lookup_unreachable":
+                lookup_unreachable_entries.append(entry)
+            elif failure_reason == "lookup_error":
+                lookup_error_entries.append(entry)
+            elif failure_reason != "parents_too_general":
+                # A structure whose parents were all too general is reported in
+                # too_general_parent_matches, not as having no ChEBI match.
                 unresolved_smiles.append(entry)
-                lookup_degraded = lookup_degraded or (
-                    failure_reason == "lookup_unavailable"
-                )
         record_ambiguous(entry, ambiguous_match)
         return chebi_ids
 
@@ -268,18 +293,26 @@ def parse_studyset(studyset: str):
 
         weight = _line_weight(parts)
         if weight is not None:
-            # Check if first part is SMILES
+            # A class can arrive more than once (typed twice, or a parent predicted
+            # for several structures); the highest weight wins, as it does when
+            # overlapping classes propagate weights to a shared leaf.
             if is_smiles(parts[0]):
                 # Apply the same weight to all resulting ChEBI IDs
                 for chebi_id in resolve_structure(parts[0]):
                     class_id = normalize_id(chebi_id)
                     studyset_list.append(class_id)
-                    weights_dict[class_id] = weight
+                    weights_dict[class_id] = max(
+                        weight,
+                        weights_dict.get(class_id, weight),
+                    )
             else:
                 class_id = resolve_identifier(parts[0])
                 if class_id is not None:
                     studyset_list.append(class_id)
-                    weights_dict[class_id] = weight
+                    weights_dict[class_id] = max(
+                        weight,
+                        weights_dict.get(class_id, weight),
+                    )
             continue
 
         # Fallback: treat all parts as IDs without weights

@@ -114,6 +114,36 @@ def test_prefixed_id_keeps_a_whole_number_weight(parse):
     assert weights == {"CHEBI_17079": 2.0}
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["CHEBI:17079 0.9\nCHEBI:17079 0.2", "CHEBI:17079 0.2\nCHEBI:17079 0.9"],
+    ids=["highest-first", "highest-last"],
+)
+def test_repeated_class_keeps_its_highest_weight(parse, text):
+    """Whichever line comes last, a repeated class keeps the highest weight."""
+    _, weights, _ = parse(text)
+    assert weights == {"CHEBI_17079": 0.9}
+
+
+@pytest.mark.parametrize(
+    "smiles_weights",
+    [{"CCO": 0.9, "OCC": 0.2}, {"OCC": 0.2, "CCO": 0.9}],
+    ids=["highest-first", "highest-last"],
+)
+def test_structures_sharing_a_class_keep_the_highest_weight(
+    monkeypatch,
+    smiles_weights,
+):
+    """Two structures resolving to one class (e.g. a shared predicted parent)."""
+    monkeypatch.setattr(
+        smiles_lookup,
+        "convert_smiles_to_chebi",
+        lambda *a, **k: (["CHEBI:25810"], True, None, None, []),
+    )
+    weights, *_ = smiles_lookup.smiles_weights_to_chebi_weights(smiles_weights)
+    assert weights == {"CHEBI:25810": 0.9}
+
+
 def test_blank_input(parse):
     studyset, weights, diagnostics = parse("   \n\n  ")
     assert (studyset, weights) == ([], {})

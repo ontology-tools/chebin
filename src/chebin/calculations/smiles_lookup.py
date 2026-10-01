@@ -17,6 +17,10 @@ from rdkit.Chem import inchi
 
 from chebin.calculations.chebi_ids import looks_like_chebi_id, to_chebi_curie
 from chebin.calculations.log_utils import preview
+from chebin.calculations.predicted_parents import (
+    LEAF_EXPANSION_LIMIT,
+    select_expandable_parents,
+)
 from chebin.config import require_data_path
 
 #: Local table asserting SMILES/InChIKey -> ChEBI ID for removed leaf classes, relative
@@ -26,28 +30,39 @@ SMILES_INCHIKEY_LOOKUP_CSV = "removed_leaf_classes_with_inchikeys.csv"
 CHEBIFIER_DETAILS_URL = "https://chebifier.hastingslab.org/api/details"
 CHEBIFIER_CLASSIFY_URL = "https://chebifier.hastingslab.org/api/classify"
 
+#: Model used to predict parent classes. An alias Chebifier resolves server-side,
+#: so predictions can change without notice if it is repointed; the previous
+#: "ELECTRA (ChEBI50-3STAR)" was withdrawn (HTTP 400) as of 2026-10.
+CHEBIFIER_CLASSIFY_MODEL = "best_model"
+
 #: (connect, read) timeouts for the Chebifier calls, so a hung service can't stall
 #: a web request indefinitely.
 CHEBIFIER_TIMEOUT = (5, 30)
 
 
 def _post_chebifier_json(url, payload, label):
-    """POST to Chebifier and return the decoded JSON, or None if that failed.
+    """POST to Chebifier and return (decoded JSON, None), or (None, failure_reason).
 
-    Chebifier answers some malformed structures with a 502 HTML error page rather
-    than JSON, so decoding is guarded as well as the request itself: returning None
-    lets the caller report the entry as unresolved instead of raising.
+    failure_reason tells apart a service that couldn't be reached at all
+    (``"lookup_unreachable"``: connection error or timeout, worth retrying later)
+    from one that answered but unusably (``"lookup_error"``: an error status or a
+    non-JSON body, which a retry won't fix -- e.g. a 400 for a model name it no
+    longer knows, or the 502 HTML page it sends for some malformed structures).
+    Decoding is guarded as well as the request itself, so the caller can report
+    the entry as unresolved instead of raising.
     """
     response = None
     try:
         response = requests.post(url, json=payload, timeout=CHEBIFIER_TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        return response.json(), None
     except Exception as error:  # noqa: BLE001
         print(f"Warning: Chebifier {label} lookup failed: {error}")
         if response is not None:
             print(f"{label} response content: {preview(response.content)}")
-        return None
+        if isinstance(error, (requests.ConnectionError, requests.Timeout)):
+            return None, "lookup_unreachable"
+        return None, "lookup_error"
 
 
 def _clean_lookup_value(value):
@@ -187,7 +202,8 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
     after that keys off the parsed molecule, so both input forms share one cascade.
     A bare InChIKey is not accepted -- it's a hash with no recoverable structure.
 
-    Returns (chebi_ids_list, was_resolved, ambiguous_match, failure_reason).
+    Returns (chebi_ids_list, was_resolved, ambiguous_match, failure_reason,
+    too_general_parents).
     ambiguous_match is None unless the matched SMILES/InChIKey is asserted by more
     than one ChEBI term in the local lookup table, in which case it's
     (chosen_chebi_id, all_chebi_ids) so the caller can surface the ambiguity to the
@@ -200,13 +216,24 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
       so it's a typo rather than a gap in ChEBI. No remote call is made for these.
     - ``"no_chebi_match"``: a valid structure with no ChEBI entry (and no predicted
       parents, when use_parents is set).
-    - ``"lookup_unavailable"``: Chebifier could not be reached or answered
-      unusably. The structure may well be fine, so it must not be reported as
-      invalid.
+    - ``"lookup_unreachable"``: Chebifier could not be reached (connection error
+      or timeout), so trying again later may well work.
+    - ``"lookup_error"``: Chebifier was reached but answered with an error or an
+      unusable response, so a retry is unlikely to help.
+
+    - ``"parents_too_general"``: parents were predicted, but every one of them
+      has more leaves than the expansion limit (see too_general_parents).
+
+    In both lookup cases the structure may well be fine, so it must not be
+    reported as invalid.
 
     use_parents: if no direct ChEBI ID can be found (local table or remote
     lookup), fall back to a remote classification call and use its direct
-    parent ChEBI IDs instead of leaving the SMILES unresolved.
+    parent ChEBI IDs instead of leaving the SMILES unresolved. As when the
+    restricted backgrounds are built (see :mod:`chebin.calculations.predicted_parents`),
+    only the deepest predicted parents are used, and any with more than
+    LEAF_EXPANSION_LIMIT leaves are left out and listed in too_general_parents
+    -- which is filled whether or not other parents were kept.
     """
     (
         local_smiles_to_chebi,
@@ -218,6 +245,7 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
     chebi_ids = []
     was_resolved = False
     ambiguous_match = None
+    too_general_parents = []
     cleaned_smiles = _clean_lookup_value(smiles_string)
     is_inchi = cleaned_smiles.startswith("InChI=")
     try:
@@ -253,7 +281,7 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
         print(
             f"Found local ChEBI ID from exact SMILES match: {chosen_id} for SMILES {cleaned_smiles}",
         )
-        return chebi_ids, was_resolved, ambiguous_match, None
+        return chebi_ids, was_resolved, ambiguous_match, None, too_general_parents
 
     # If no direct SMILES match exists, try InChIKey -> ChEBI using RDKit to compute
     # the InChIKey for the submitted SMILES.
@@ -277,7 +305,13 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
                     f"Found local ChEBI ID from InChIKey match: {chosen_id} "
                     f"for SMILES {cleaned_smiles} (InChIKey {user_inchikey})",
                 )
-                return chebi_ids, was_resolved, ambiguous_match, None
+                return (
+                    chebi_ids,
+                    was_resolved,
+                    ambiguous_match,
+                    None,
+                    too_general_parents,
+                )
     except Exception as error:  # noqa: BLE001
         print(
             f"Warning: failed to compute InChIKey for SMILES {cleaned_smiles}: {error}",
@@ -291,12 +325,18 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
             f"Could not read {'InChI' if is_inchi else 'SMILES'} {cleaned_smiles} "
             f"as a chemical structure, excluding from analysis.",
         )
-        return chebi_ids, was_resolved, ambiguous_match, "invalid_structure"
+        return (
+            chebi_ids,
+            was_resolved,
+            ambiguous_match,
+            "invalid_structure",
+            too_general_parents,
+        )
 
     # Get details from ChEBI lookup to check for a direct match to a ChEBI ID.
     # The remote API only accepts SMILES, so an InChI input has to go over the wire
     # as the SMILES RDKit parsed it into.
-    details = _post_chebifier_json(
+    details, lookup_failure = _post_chebifier_json(
         CHEBIFIER_DETAILS_URL,
         {
             "type": "type",
@@ -308,7 +348,13 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
         "details",
     )
     if details is None:
-        return chebi_ids, was_resolved, ambiguous_match, "lookup_unavailable"
+        return (
+            chebi_ids,
+            was_resolved,
+            ambiguous_match,
+            lookup_failure,
+            too_general_parents,
+        )
 
     lookup_model = details.get("models", {}).get("ChEBI Lookup", {})
 
@@ -347,27 +393,34 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
         print(
             f"No direct ChEBI ID found from lookup for SMILES {cleaned_smiles}, attempting classification...",
         )
-        classification = _post_chebifier_json(
+        classification, lookup_failure = _post_chebifier_json(
             CHEBIFIER_CLASSIFY_URL,
             {
                 "smiles": canonical_smiles or cleaned_smiles,
                 "ontology": False,
                 "selectedModels": {
-                    "ELECTRA (ChEBI50-3STAR)": True,
+                    CHEBIFIER_CLASSIFY_MODEL: True,
                 },
             },
             "classification",
         )
         if classification is None:
-            return chebi_ids, was_resolved, ambiguous_match, "lookup_unavailable"
+            return (
+                chebi_ids,
+                was_resolved,
+                ambiguous_match,
+                lookup_failure,
+                too_general_parents,
+            )
 
         direct_parents = classification.get("direct_parents")
         if direct_parents:
             # Extract ChEBI IDs from all parent lists
+            predicted_ids = []
             for parent_list in direct_parents:
                 if parent_list is not None:
                     parent_ids = [f"CHEBI:{parent[0]}" for parent in parent_list]
-                    chebi_ids.extend(parent_ids)
+                    predicted_ids.extend(parent_ids)
                     print(
                         f"Found direct parent ChEBI IDs from classification for SMILES {cleaned_smiles}: {parent_ids}",
                     )
@@ -378,6 +431,17 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
                     print(
                         f"Classification response content: {preview(classification)}",
                     )
+            # Same rules as when the restricted backgrounds are built: only the
+            # deepest predicted parents, and none too general to expand.
+            kept_ids, too_general_parents = select_expandable_parents(
+                list(dict.fromkeys(predicted_ids)),
+            )
+            if too_general_parents:
+                print(
+                    f"Not expanding predicted parents over {LEAF_EXPANSION_LIMIT} "
+                    f"leaves for SMILES {cleaned_smiles}: {too_general_parents}",
+                )
+            chebi_ids.extend(kept_ids)
             if chebi_ids:
                 was_resolved = True
 
@@ -390,11 +454,18 @@ def convert_smiles_to_chebi(smiles_string, use_parents=False):
             f"No direct ChEBI ID found from lookup for SMILES {cleaned_smiles}, excluding from analysis.",
         )
 
+    if was_resolved:
+        failure_reason = None
+    elif too_general_parents:
+        failure_reason = "parents_too_general"
+    else:
+        failure_reason = "no_chebi_match"
     return (
         chebi_ids,
         was_resolved,
         ambiguous_match,
-        None if was_resolved else "no_chebi_match",
+        failure_reason,
+        too_general_parents,
     )
 
 
@@ -454,7 +525,7 @@ def smiles_list_to_studyset(smiles_list, use_parents=False):
         if not is_smiles(entry):
             studyset_list.append(entry)
             continue
-        chebi_ids, was_resolved, ambiguous_match, failure_reason = (
+        chebi_ids, was_resolved, ambiguous_match, failure_reason, _ = (
             convert_smiles_to_chebi(entry, use_parents=use_parents)
         )
         if not was_resolved:
@@ -486,7 +557,7 @@ def smiles_weights_to_chebi_weights(smiles_weights, use_parents=False):
         if not is_smiles(entry):
             weights_dict[entry] = weight
             continue
-        chebi_ids, was_resolved, ambiguous_match, failure_reason = (
+        chebi_ids, was_resolved, ambiguous_match, failure_reason, _ = (
             convert_smiles_to_chebi(entry, use_parents=use_parents)
         )
         if not was_resolved:
@@ -494,7 +565,9 @@ def smiles_weights_to_chebi_weights(smiles_weights, use_parents=False):
             if failure_reason == "invalid_structure":
                 invalid_structures.append(entry)
         _record_ambiguous(ambiguous_matches, entry, ambiguous_match)
+        # Several structures can resolve to the same ChEBI ID (e.g. a shared
+        # predicted parent); the highest weight wins rather than the last one.
         for chebi_id in chebi_ids:
-            weights_dict[chebi_id] = weight
+            weights_dict[chebi_id] = max(weight, weights_dict.get(chebi_id, weight))
 
     return weights_dict, unresolved_smiles, ambiguous_matches, invalid_structures
