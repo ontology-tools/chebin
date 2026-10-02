@@ -185,3 +185,46 @@ def test_export_graph_html_links_nodes_to_chebi(tmp_path):
 
     # The ids the link is built from survive into the inlined graph data.
     assert '"chebi_id": "CHEBI:' in page
+
+
+PAPER_PRUNING = {
+    "root_children_prune": True,
+    "levels": 3,
+    "high_p_value_prune": True,
+    "p_value_threshold": 0.05,
+    "zero_degree_prune": True,
+}
+
+
+def _assert_pruned_classes_not_reported(result):
+    """Nothing reported as pruned may still carry a p-value in the results."""
+    removed = set(result["removed_nodes"])
+    assert removed, "expected the pruners to remove something"
+    assert not removed & set(result["enrichment_results"])
+
+
+def test_pruning_also_removes_role_classes():
+    """With both hierarchies, pruned role classes (e.g. 'role' itself) used to be
+    enriched and reported anyway, since only structural classes were filtered."""
+    from chebin.calculations.fishers_calculations import run_enrichment_analysis
+
+    result, _ = run_enrichment_analysis(
+        STUDY_SET,
+        classification="full",
+        **PAPER_PRUNING,
+    )
+    _assert_pruned_classes_not_reported(result)
+
+
+def test_narrow_background_pruning_also_removes_role_classes(recon3d):
+    from chebin.preparing_data.wikidata.narrow_background_fishers import (
+        run_narrow_background_enrichment_analysis,
+    )
+
+    result, *_ = run_narrow_background_enrichment_analysis(
+        STUDY_SET,
+        classification="full",
+        narrow_background_leaves_json=recon3d,
+        **PAPER_PRUNING,
+    )
+    _assert_pruned_classes_not_reported(result)

@@ -1,6 +1,30 @@
+import xml.etree.ElementTree as ET
+
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem.inchi import InchiToInchiKey, MolToInchi
+
+_OWL_CLASS_TAG = "{http://www.w3.org/2002/07/owl#}Class"
+_RDF_ABOUT = "{http://www.w3.org/1999/02/22-rdf-syntax-ns#}about"
+_INCHIKEY_TAG = "{https://w3id.org/chemrof/}inchi_key_string"
+
+
+def build_inchikey_map_from_owl(owl_file):
+    """Map each ChEBI class IRI to the InChIKey ChEBI asserts for it.
+
+    ChEBI's asserted InChIKey is preferred over one recomputed from the class's
+    SMILES with RDKit, since the two don't always agree -- and for some SMILES
+    RDKit can't compute one at all.
+    """
+    inchikey_map = {}
+    for _, elem in ET.iterparse(owl_file, events=("end",)):
+        if elem.tag == _OWL_CLASS_TAG:
+            iri = elem.get(_RDF_ABOUT)
+            key_elem = elem.find(_INCHIKEY_TAG)
+            if iri and key_elem is not None and key_elem.text:
+                inchikey_map[iri] = key_elem.text.strip()
+            elem.clear()
+    return inchikey_map
 
 
 def smiles_to_inchikey(smiles):
@@ -45,7 +69,13 @@ def _canonicalize_and_convert(smiles):
     return canonical, InchiToInchiKey(MolToInchi(mol)), False
 
 
-def convert_smiles_file(input_file, output_file):
+def convert_smiles_file(input_file, output_file, owl_file=None):
+    """Add canonical SMILES and an InChIKey to the removed-leaf-classes CSV.
+
+    owl_file: the ChEBI OWL the leaves came from. When given, each leaf gets the
+    InChIKey ChEBI asserts for it (see build_inchikey_map_from_owl), and one is
+    only computed from the SMILES for leaves without an asserted InChIKey.
+    """
 
     # Open the input CSV file and read it
     df = pd.read_csv(input_file)
@@ -56,8 +86,22 @@ def convert_smiles_file(input_file, output_file):
     # and convert to InChIKey in one pass per row.
     converted = df["SMILES"].apply(_canonicalize_and_convert)
     df["SMILES"] = converted.apply(lambda t: t[0])
-    df["InChIKey"] = converted.apply(lambda t: t[1])
+    computed_keys = converted.apply(lambda t: t[1])
     starcount = converted.apply(lambda t: t[2]).sum()
+
+    if owl_file is not None:
+        owl_keys = df["IRI"].map(build_inchikey_map_from_owl(owl_file))
+        df["InChIKey"] = owl_keys.fillna(computed_keys)
+        both = owl_keys.notna() & computed_keys.notna()
+        print(f"InChIKeys asserted by ChEBI: {int(owl_keys.notna().sum())}.")
+        print(
+            f"  of which none could be computed from the SMILES: "
+            f"{int((owl_keys.notna() & computed_keys.isna()).sum())}, "
+            f"and the computed one differed: "
+            f"{int((owl_keys[both] != computed_keys[both]).sum())}.",
+        )
+    else:
+        df["InChIKey"] = computed_keys
     # Save the updated DataFrame to a new CSV file
     df.to_csv(output_file, index=False)
 
@@ -66,8 +110,8 @@ def convert_smiles_file(input_file, output_file):
     generated_keys = df["InChIKey"].notnull().sum()
     failed_conversions = total_rows - generated_keys
     print(f"Processed {total_rows} rows.")
-    print(f"Generated {generated_keys} InChIKeys.")
-    print(f"Failed conversions: {failed_conversions}.")
+    print(f"Rows with an InChIKey: {generated_keys}.")
+    print(f"Rows without one: {failed_conversions}.")
     print(f"SMILES with stars (not converted): {starcount}.")
 
 
@@ -90,5 +134,5 @@ if __name__ == "__main__":
     input_file = "data/removed_leaf_classes_with_smiles.csv"
     output_file = "data/removed_leaf_classes_with_inchikeys.csv"
 
-    convert_smiles_file(input_file, output_file)
+    convert_smiles_file(input_file, output_file, owl_file="data/source_files/chebi.owl")
     count_nans(output_file)

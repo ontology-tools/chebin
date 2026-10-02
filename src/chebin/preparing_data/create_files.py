@@ -542,7 +542,9 @@ def create_all_files(data_folder="data"):
         class_to_leaf_output_file,
     )
 
-    ### Convert SMILES to InChIKeys for the removed leaf classes (needed by find_missing_chebis and the website)
+    ### Add InChIKeys for the removed leaf classes (needed by find_missing_chebis and the website).
+    ### ChEBI's asserted InChIKeys are read from the OWL; one is only computed from the
+    ### SMILES where ChEBI asserts none (see build_inchikey_map_from_owl).
     print("Generating InChIKeys for removed leaf classes...")
     _run_stage(
         "convert_smiles_to_inchikeys",
@@ -550,6 +552,7 @@ def create_all_files(data_folder="data"):
         convert_smiles_file,
         leaves_smiles_csv,
         leaves_inchikeys_csv,
+        owl_file=chebi_file,
     )
 
     ### The broad human background combines HMDB with LOTUS Homo sapiens, so without the
@@ -606,6 +609,7 @@ def create_all_files(data_folder="data"):
             "lotus_hs",
             compounds_file=lotus_hs_chebi_tsv,
             output_file=lotus_hs_updated_tsv,
+            inchikeys_csv=leaves_inchikeys_csv,
         )
 
         print("Finding missing ChEBI IDs for HMDB...")
@@ -616,6 +620,7 @@ def create_all_files(data_folder="data"):
             "hmdb",
             compounds_file=hmdb_filtered_tsv,
             output_file=hmdb_updated_tsv,
+            inchikeys_csv=leaves_inchikeys_csv,
         )
 
         print("Combining human datasets...")
@@ -638,6 +643,7 @@ def create_all_files(data_folder="data"):
             class_to_leaf_map=class_to_leaf_output_file,
             output_json=f"{data_folder}/human_entities_leaves.json",
             taxon_label="homo_sapiens",
+            chebi_parent_map_json=parent_map_json,
         )
 
     print("Downloading LOTUS Arabidopsis thaliana explorer CSV...")
@@ -667,6 +673,7 @@ def create_all_files(data_folder="data"):
         "lotus_at",
         compounds_file=lotus_at_chebi_tsv,
         output_file=lotus_at_updated_tsv,
+        inchikeys_csv=leaves_inchikeys_csv,
     )
 
     print("Gathering narrow leaf classes (Arabidopsis thaliana)...")
@@ -679,6 +686,7 @@ def create_all_files(data_folder="data"):
         class_to_leaf_map=class_to_leaf_output_file,
         output_json=f"{data_folder}/arabidopsis_thaliana_leaves.json",
         taxon_label="arabidopsis_thaliana",
+        chebi_parent_map_json=parent_map_json,
     )
 
     print("Downloading Recon3D model...")

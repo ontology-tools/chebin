@@ -651,10 +651,15 @@ def run_narrow_background_enrichment_analysis(
             # print(f"Removed nodes by linear branch pruner: {removed_nodes}")
             all_removed_nodes.update(removed_nodes)
 
-        # Remove pruned nodes from studyset_ancestors_all
+        # Remove pruned nodes from studyset_ancestors_all, and from the role
+        # classes too: those are enriched separately, so without this a pruned
+        # role (e.g. 'role' itself) would still be tested and reported.
         studyset_ancestors = [
             cls for cls in studyset_ancestors_all if cls not in all_removed_nodes
         ]
+        studyset_ancestors_roles = {
+            role for role in studyset_ancestors_roles if role not in all_removed_nodes
+        }
         print(
             f"Number of study set ancestors after before-enrichment pruning: {len(studyset_ancestors)}",
         )

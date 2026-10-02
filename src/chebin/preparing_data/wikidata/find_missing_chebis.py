@@ -190,6 +190,7 @@ def find_missing_chebis(
     output_file_path=None,
     smiles_columns=None,
     chebi_column="chebi_id",
+    inchikeys_csv="data/removed_leaf_classes_with_inchikeys.csv",
 ):
     df = pd.read_csv(compounds_file, sep="\t")
 
@@ -217,7 +218,7 @@ def find_missing_chebis(
     # Build optional InChIKey -> ChEBI IRI map from removed leaf classes file.
     inchikey_map = {}
     try:
-        removed_inchikeys = pd.read_csv("data/removed_leaf_classes_with_inchikeys.csv")
+        removed_inchikeys = pd.read_csv(inchikeys_csv)
         # possible column names for InChIKey: InChIKey, InChIkey, inchikey
         inchikey_col = None
         for c in ["InChIKey", "InChIkey", "inchikey", "InChIKEY"]:
@@ -330,11 +331,14 @@ def run_find_missing_chebis(
     output_file: str | None = None,
     smiles_columns: list | None = None,
     chebi_column: str | None = None,
+    inchikeys_csv: str = "data/removed_leaf_classes_with_inchikeys.csv",
 ):
     """Programmatic wrapper around :func:`find_missing_chebis`.
 
     Parameters mirror the CLI presets. This avoids argparse when calling
-    from other scripts (e.g., `create_files.py`).
+    from other scripts (e.g., `create_files.py`). inchikeys_csv must be passed
+    when building into a folder other than data/, or the previous build's
+    InChIKey table would be read.
     """
     SOURCE_PRESETS = {
         "wikidata_hs": {
@@ -396,6 +400,7 @@ def run_find_missing_chebis(
         output_file,
         smiles_columns=smiles_columns,
         chebi_column=chebi_column,
+        inchikeys_csv=inchikeys_csv,
     )
 
 
