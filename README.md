@@ -197,13 +197,11 @@ Four independent choices combine to give the full name:
   `{"unresolved_smiles": [...], "ambiguous_matches": [...], "invalid_structures": [...]}`.
   `unresolved_smiles` is the plain list of inputs that resolved to no ChEBI
   class at all. `invalid_structures` is the subset of those that RDKit could not
-  read as a molecule in the first place. 
-  These are reported but dropped.
-  An *ambiguous match* is the opposite
-  problem --- a structure that matched several ChEBI classes at once. Only one
-  of them enters the study set (the lowest ChEBI ID, so the same input always
-  resolves the same way), and the runners-up are reported here rather than
-  silently dropped:
+  read as a molecule in the first place. These are reported but dropped. An
+  *ambiguous match* is the opposite problem --- a structure that matched several
+  ChEBI classes at once. Only one of them enters the study set (the lowest ChEBI
+  ID, so the same input always resolves the same way), and the runners-up are
+  reported here rather than silently dropped:
 
   ```python
   {"smiles": "CCO", "chosen": "CHEBI:16236", "alternatives": ["CHEBI:17246"]}
@@ -565,8 +563,7 @@ available. Two colour scales can be chosen in the graph legend:
   graph. This makes the most of the colour range within one analysis, but
   colours cannot be compared between graphs.
 - **Absolute**: the darkest colour is a fixed p-value cutoff (p ≤ 1e-*x*, where
-  *x* is set next to the selector, 4 by default).
-  Makes comparisons easier.
+  *x* is set next to the selector, 4 by default). Makes comparisons easier.
 
 The graph will initially show only the most relevant branches. This means that
 all nodes with p-values under or equal to 0.05 will be shown, including all
