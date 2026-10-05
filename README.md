@@ -557,15 +557,16 @@ example, which nodes were removed by pruning.
 ### The Graph
 
 On the next webpage, a graph based on the enrichment analysis is displayed. The
-colouring of the nodes is based on the significance of the p-values. It is
-dependent on the values in that session; it is relative by default. Making the
-colour scale absolute can currently only be done by changing the code (not
-available on the online webpage). To make this change in your local version, go
-to `website/templates/graph.html` and change the following line:
+colouring of the nodes is based on the significance of the p-values, on a
+$-\log_{10}(p)$ scale. The corrected p-value is used for the colouring if it is
+available. Two colour scales can be chosen in the graph legend:
 
-`const colourScaleMode = 'relative'; // 'absolute' or 'relative'`
-
-The corrected p-value is used for the colouring if it is available.
+- **Relative** (default): the darkest colour is the smallest p-value in that
+  graph. This makes the most of the colour range within one analysis, but
+  colours cannot be compared between graphs.
+- **Absolute**: the darkest colour is a fixed p-value cutoff (p ≤ 1e-*x*, where
+  *x* is set next to the selector, 4 by default).
+  Makes comparisons easier.
 
 The graph will initially show only the most relevant branches. This means that
 all nodes with p-values under or equal to 0.05 will be shown, including all
