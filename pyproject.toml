@@ -1,11 +1,12 @@
 [project]
 name = "chebin"
-version = "1.0.1"
+version = "1.1.0"
 description = "Ontology-based chemical enrichment analysis using the ChEBI ontology"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
+authors = [{ name = "Human-Centered Health AI, Idiap Research Institute" }]
 keywords = [
   "chebi",
   "cheminformatics",
@@ -66,12 +67,6 @@ known_first_party = [
 [tool.deptry.package_module_name_map]
 py-horned-owl = ["pyhornedowl"]
 
-[tool.ty.src]
-# Notebooks are development scratch, not part of the library (deptry skips them
-# too, and they are excluded from the wheel below). They import plotting
-# libraries that are deliberately not project dependencies.
-exclude = ["**/*.ipynb"]
-
 [tool.typos.default.extend-words]
 # "cose" is the Cytoscape.js Compound Spring Embedder layout, not a typo of
 # "case". Without this the typos hook rewrites it and breaks graph rendering
@@ -89,17 +84,9 @@ extend-exclude = ["src/chebin/static/cytoscape.min.js"]
 [tool.uv]
 package = true
 
-# Everything under src/chebin/ ships by default. These are development leftovers
-# that live inside the package tree but are not part of the library: without the
-# excludes, plotting_children.ipynb alone was 183 KB of a 327 KB wheel.
+# Everything under src/chebin/ ships by default. wikidata/data/ holds locally
+# generated files that live inside the package tree but are not part of the
+# library.
 [tool.uv.build-backend]
-source-exclude = [
-  "**/*.ipynb",
-  "**/wikidata/test.py",
-  "**/wikidata/data/**",
-]
-wheel-exclude = [
-  "**/*.ipynb",
-  "**/wikidata/test.py",
-  "**/wikidata/data/**",
-]
+source-exclude = ["**/wikidata/data/**"]
+wheel-exclude = ["**/wikidata/data/**"]

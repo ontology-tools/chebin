@@ -42,7 +42,7 @@ from chebin.calculations.pre_fishers_calculations import (
     get_structural_leaf_ids,
 )
 from chebin.calculations.smiles_lookup import smiles_weights_to_chebi_weights
-from chebin.calculations.visualitations_and_pruning import (
+from chebin.calculations.visualizations_and_pruning import (
     create_graph_with_roles_and_structures,
     high_p_value_branch_pruner,
     id_to_name,

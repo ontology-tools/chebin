@@ -83,23 +83,6 @@ def strip_prefix(class_id: str) -> str:
 # Forming graph
 #####################################
 
-# def find_paths_to_root_old(ontology, start_class):
-#     paths = []
-
-#     def dfs(current_class, current_path):
-#         superclasses = ontology.get_superclasses(current_class)
-#         superclasses = [s for s in superclasses if s not in current_path] # Remove circular references
-
-#         if not superclasses: # Reached root
-#             paths.append(current_path)
-#             return
-
-#         for superclass in superclasses:
-#             dfs(superclass, current_path + [superclass]) # Appends superclass to path
-
-#     dfs(start_class, [start_class])
-#     return paths
-
 
 def find_paths_to_root_with_map(
     start_class: str,
@@ -135,7 +118,7 @@ def find_paths_to_root_with_map(
     return paths
 
 
-# Not used anymore
+# Not used anymore since find_paths_to_root_with_map is more efficient and avoids repeated file reads.
 def find_paths_to_root_with_ontology(
     ontology,
     start_class: str,
@@ -338,77 +321,6 @@ def create_graph_with_roles_and_structures(
     return G
 
 
-# # Similar to the above but doesn't first create separate graphs gor each class
-# def create_graph_from_map_original(classes, parent_map_json_file, max_n_leaf_classes=inf):
-
-#     with open(parent_map_json_file, "r") as f:
-#         parents_map = json.load(f)
-
-#     G = nx.DiGraph()
-#     j = 0
-
-
-#     for cls in classes:
-#         if j % 10 == 0:
-#             print(f"Proceeesing class {j+1}/{len(classes)}")
-
-#         paths = find_paths_to_root_with_map(cls, parents_map)
-#         H = create_graph_from_paths(paths)
-
-#         # Add labels for Cytospace compatibility
-#         label_dict = {node: id_to_name(node) for node in H.nodes()}
-#         nx.set_node_attributes(H, label_dict, 'label')
-
-#         G = nx.compose(G, H)  # Combine graphs
-
-#         j += 1
-#         if j >= max_n_leaf_classes:
-#             break
-
-#         print(f"Total number of starting leaf classes processed in graph: {j}")
-#     return G
-
-
-# def draw_graph(G, graphing_layout, title):
-#     if graphing_layout == "default":
-#         pos = None  # Default layout
-#     elif graphing_layout == "kamada_kawai":
-#         pos = nx.kamada_kawai_layout(G)
-#     elif graphing_layout == "spectral":
-#         pos = nx.spectral_layout(G)
-#     elif graphing_layout == "layer_based":
-#         # Calculate depth of each node from root
-#         roots = [n for n, d in G.in_degree() if d == 0]
-#         if roots:
-#             # Assign layer based on shortest path from root
-#             layers = {}
-#             for node in G.nodes():
-#                 min_dist = float('inf')
-#                 for root in roots:
-#                     if nx.has_path(G, root, node):
-#                         dist = nx.shortest_path_length(G, root, node)
-#                         min_dist = min(min_dist, dist)
-#                 layers[node] = min_dist if min_dist != float('inf') else 0
-
-#             # Set subset attribute for multipartite layout
-#             nx.set_node_attributes(G, layers, 'subset')
-#             pos = nx.multipartite_layout(G, subset_key='subset', align='horizontal')
-#     else:
-#         print(f"Unknown graphing layout: {graphing_layout}. Using default.")
-#         pos = None  # Default layout
-
-
-#     plt.figure(figsize=(20, 10))
-
-#     # Draw nodes with their assigned colors
-#     node_colors = [G.nodes[n].get("color") for n in G.nodes()]
-
-#     nx.draw(G, pos, with_labels=True, node_size=500, node_shape='s', font_size=8, font_weight='bold', node_color=node_colors, arrows=True,
-#             arrowsize=12, edge_color='black', alpha=1)
-
-#     plt.title(title, fontsize=12)
-#     plt.show()
-
 #####################################
 # Pruning strategies
 #####################################
@@ -570,7 +482,7 @@ def _log_p_value_pruner_stats(stats):
     These conditions used to print once per node *visit*. Because the walk below
     is not memoised and ChEBI is a DAG with heavy multiple inheritance, a node is
     re-entered once per distinct root path, which produced ~400k near-identical
-    lines in a single real run. Aggregating mirrors graph_to_cytospace_json.
+    lines in a single real run. Aggregating mirrors graph_to_cytoscape_json.
     """
     leaves = stats["no_pvalue_leaf"]
     non_leaves = stats["no_pvalue_non_leaf"]
@@ -732,7 +644,7 @@ def extract_chebi_id(label: str) -> str | None:
     return label
 
 
-def graph_to_cytospace_json(
+def graph_to_cytoscape_json(
     G,
     output_file,
     enrichment_results=None,
@@ -865,35 +777,3 @@ def graph_to_cytoscape_dict(
             print(f"Graph N/A node: {label} | reason={reason}")
 
     return data
-
-
-# Example usage:
-# start_class = "http://purl.obolibrary.org/obo/CHEBI_33675"
-# start_time = time.time()
-# ontology = load_ontology("data/filtered_chebi_no_leaves_with_smiles_no_deprecated.owl")
-# paths = find_paths_to_root(ontology, start_class)
-# end_time = time.time()
-# print(f"Time taken using ontology: {end_time - start_time} seconds")
-# print("Using ontology:")
-# for path in paths:
-#     print(" -> ".join(path))
-# start_time = time.time()
-# paths = find_paths_to_root_with_map("data/chebi_parent_map.json", start_class)
-# end_time = time.time()
-# print(f"Time taken using parent map: {end_time - start_time} seconds")
-# print("Using parent map:")
-# for path in paths:
-#     print(" -> ".join(path))
-#
-# ---- Usage ----
-# Variables
-# levels = 2 # Number of levels to prune from root. 1 only prunes root, and it's direct neighbor, and so on.
-# allow_re_execution = False  # True or False. whether the pruner can be executed multiple times on a given graph.
-# execution_count = 0  # Counter for the number of executions
-#
-# OBS: first run cell to create G, then run the pruner function below.
-# pruned_G = G.copy()
-# pruned_G, execution_count = root_children_pruner(pruned_G, levels, allow_re_execution, execution_count)
-#
-# graphing_layout = "kamada_kawai" # options: "default", "kamada_kawai", "spectral", "layer_based"
-# draw_graph(pruned_G, graphing_layout, f"Ontology graph pruned {levels} levels from root(s)")

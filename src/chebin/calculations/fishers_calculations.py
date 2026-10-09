@@ -20,7 +20,7 @@ from chebin.calculations.pre_fishers_calculations import (
     get_structural_leaf_ids,
 )
 from chebin.calculations.smiles_lookup import smiles_list_to_studyset
-from chebin.calculations.visualitations_and_pruning import (
+from chebin.calculations.visualizations_and_pruning import (
     create_graph_with_roles_and_structures,
     high_p_value_branch_pruner,
     id_to_name,
@@ -217,12 +217,6 @@ def get_n_ss_annotated(
         n_ss_annotated = len(leaves.intersection(set(studyset_leaves)))
         return n_ss_annotated
 
-    # if classification in ["functional", "full"]:
-    #     # Get all roles (direct + inherited from ancestors + role ancestors)
-    #     all_roles = class_to_all_roles_map.get(class_to_check, [])
-    #     for role in all_roles:
-    #         leaves.update(roles_to_leaves_map.get(role, []))
-
     else:
         raise ValueError(
             f"Classification '{classification}' is not supported. "
@@ -340,11 +334,6 @@ def get_enrichment_values(
                 "odds_ratio": odds,
                 "p_value": p_value,
             }
-
-        # if classification == "functional" or classification == "full":
-        # # Update studyset_ancestors_roles with the roles associated (direct + inherited from ancestors) with the current class being checked
-        # # These roles will be added to the graph
-        #     studyset_ancestors_roles.update(class_to_all_roles_map.get(class_to_check, []))
 
     # Calculate enrichment for role classes
     if classification in ["functional", "full"] and studyset_ancestors_roles:
@@ -743,7 +732,7 @@ def run_enrichment_analysis_from_smiles(
 ####################################
 
 # Plain Enrichment Pruning Strategy: For the pre-loop phase this strategy applies the High Value Branch Pruner (0.05),
-# the Linear Branch Collapser Pruner, and the Root Children Pruner (3 (change to 2) levels, without repetition).
+# the Linear Branch Collapser Pruner, and the Root Children Pruner, without repetition.
 # During the loop phase,
 # this strategy applies the Molecule Leaves Pruner, the High P-Value Branch Pruner (0.05), the Linear Branch Collapser Pruner,
 # and the Zero Degree Vertex Pruner. No pruners are applied in the final phase post-loop.

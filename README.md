@@ -46,11 +46,11 @@ it:
   dependencies = ["chebin"]
 
   [tool.uv.sources]
-  chebin = { path = "/path/to/chebin/dist/chebin-1.0.1-py3-none-any.whl" }
+  chebin = { path = "/path/to/chebin/dist/chebin-<version>-py3-none-any.whl" }
   ```
   then run `uv sync`.
 - With plain `pip`:
-  `pip install /path/to/chebin/dist/chebin-1.0.1-py3-none-any.whl`.
+  `pip install /path/to/chebin/dist/chebin-<version>-py3-none-any.whl`.
 
 Whenever the source changes, rebuild the wheel (`uv build`) and re-sync to pick it
 up. With `uv`, that's `uv lock --upgrade-package chebin && uv sync` --- the wheel

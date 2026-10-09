@@ -13,7 +13,7 @@ These functions form the core of result visualization and filtering.
 import networkx as nx
 import pytest
 
-from chebin.calculations.visualitations_and_pruning import (
+from chebin.calculations.visualizations_and_pruning import (
     clean_label,
     create_graph_from_paths,
     extract_chebi_id,

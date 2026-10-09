@@ -631,7 +631,7 @@ def remove_classes_from_owl(input_file, classes_to_remove, output_file):
     print(f"Saved to {output_file}")
 
 
-# For building parent map.  # maybe move to separate file later
+# For building parent map.
 
 
 def build_parent_map(
@@ -902,13 +902,6 @@ if __name__ == "__main__":
                 output_json,
                 deprecated_property,
             )  # Deprecated classes are removed inside the function
-
-        # shortened_output_json = "data/chebi_parent_map_shortened_id.json"
-        # if os.path.exists(shortened_output_json):
-        #     print(f"Shortened output file {shortened_output_json} already exists. Are you sure you want to overwrite it? If so, please remove it before running this script.")
-        # else:
-        #     shorten_parent_map(output_json, shortened_output_json)
-        #     print(f"Saved shortened parent map to {shortened_output_json}")
 
     elif task == "map_names_to_classes":
         print("Running code to map names to classes...")

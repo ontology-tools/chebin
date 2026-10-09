@@ -15,7 +15,7 @@ import json
 import warnings
 from pathlib import Path
 
-from chebin.calculations.visualitations_and_pruning import graph_to_cytoscape_dict
+from chebin.calculations.visualizations_and_pruning import graph_to_cytoscape_dict
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 _TEMPLATE = _PACKAGE_DIR / "templates" / "graph_standalone.html"
@@ -55,7 +55,7 @@ def export_graph_html(
     """Write the graph as a standalone interactive HTML page.
 
     The arguments mirror
-    :func:`chebin.calculations.visualitations_and_pruning.graph_to_cytospace_json`.
+    :func:`chebin.calculations.visualizations_and_pruning.graph_to_cytoscape_json`.
 
     Args:
         G: The pruned graph returned by any of the ``run_*_enrichment_analysis``

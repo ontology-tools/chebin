@@ -16,7 +16,7 @@ from chebin.calculations.fishers_calculations import (
 from chebin.calculations.multiple_test_corrections import (
     benjamini_hochberg_fdr_correction,
 )
-from chebin.calculations.visualitations_and_pruning import (
+from chebin.calculations.visualizations_and_pruning import (
     create_graph_from_paths,
     high_p_value_branch_pruner,
     linear_branch_collapser_pruner_remove_less,

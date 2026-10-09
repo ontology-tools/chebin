@@ -94,24 +94,24 @@ reference:
       - prepare_role_calculations.create_leaves_to_all_roles_map
       - prepare_role_calculations.create_roles_to_all_leaves_map
       - prepare_role_calculations.find_has_role_connections_from_owl
-      - visualitations_and_pruning.clean_label
-      - visualitations_and_pruning.create_graph_from_map
-      - visualitations_and_pruning.create_graph_from_paths
-      - visualitations_and_pruning.create_graph_with_roles_and_structures
-      - visualitations_and_pruning.delete_children
-      - visualitations_and_pruning.extract_chebi_id
-      - visualitations_and_pruning.find_paths_to_root_with_map
-      - visualitations_and_pruning.find_paths_to_root_with_ontology
-      - visualitations_and_pruning.get_name
-      - visualitations_and_pruning.graph_to_cytospace_json
-      - visualitations_and_pruning.high_p_value_branch_pruner
-      - visualitations_and_pruning.id_to_name
-      - visualitations_and_pruning.linear_branch_collapser_pruner_remove_less
-      - visualitations_and_pruning.process_branch_remove_less
-      - visualitations_and_pruning.process_node_for_p_value_pruner
-      - visualitations_and_pruning.root_children_pruner
-      - visualitations_and_pruning.strip_prefix
-      - visualitations_and_pruning.zero_degree_pruner
+      - visualizations_and_pruning.clean_label
+      - visualizations_and_pruning.create_graph_from_map
+      - visualizations_and_pruning.create_graph_from_paths
+      - visualizations_and_pruning.create_graph_with_roles_and_structures
+      - visualizations_and_pruning.delete_children
+      - visualizations_and_pruning.extract_chebi_id
+      - visualizations_and_pruning.find_paths_to_root_with_map
+      - visualizations_and_pruning.find_paths_to_root_with_ontology
+      - visualizations_and_pruning.get_name
+      - visualizations_and_pruning.graph_to_cytoscape_json
+      - visualizations_and_pruning.high_p_value_branch_pruner
+      - visualizations_and_pruning.id_to_name
+      - visualizations_and_pruning.linear_branch_collapser_pruner_remove_less
+      - visualizations_and_pruning.process_branch_remove_less
+      - visualizations_and_pruning.process_node_for_p_value_pruner
+      - visualizations_and_pruning.root_children_pruner
+      - visualizations_and_pruning.strip_prefix
+      - visualizations_and_pruning.zero_degree_pruner
       - weighted_calculations.auto_scale_weights
       - weighted_calculations.benjamini_hochberg_fdr_correction
       - weighted_calculations.bonferroni_correction
@@ -188,7 +188,7 @@ reference:
       - prepare_role_calculations.task
       - prepare_role_calculations.test_class_iri
       - prepare_role_calculations.total_role_connections
-      - visualitations_and_pruning.REPO_ROOT
+      - visualizations_and_pruning.REPO_ROOT
       - weighted_calculations.REPO_ROOT
       - weighted_calculations.logger
 

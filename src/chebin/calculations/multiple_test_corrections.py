@@ -19,9 +19,7 @@ def bonferroni_correction(enrichment_results):
             corrected_p = min(raw_p * m, 1.0)  # Bonferroni correction
 
         adjusted_results[cls]["p_value_corrected"] = corrected_p
-        correction_map[cls] = (
-            corrected_p  # Maybe not necessary to have both adjusted_results and correction_map
-        )
+        correction_map[cls] = corrected_p
 
     return adjusted_results, correction_map
 

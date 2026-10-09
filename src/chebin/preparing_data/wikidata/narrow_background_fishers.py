@@ -37,7 +37,7 @@ from chebin.calculations.predicted_parents import (
     filter_chebifier_parents,
 )
 from chebin.calculations.smiles_lookup import smiles_list_to_studyset
-from chebin.calculations.visualitations_and_pruning import (
+from chebin.calculations.visualizations_and_pruning import (
     create_graph_with_roles_and_structures,
     high_p_value_branch_pruner,
     id_to_name,
@@ -52,7 +52,7 @@ from chebin.calculations.visualitations_and_pruning import (
 # n_bg_annotated = number of those leaf classes that are descendants of the given class
 
 # For the background, we want to include all classes that are connected to the narrow set (human entities)
-# If the CHEBI_Id is a leaf, we include it (and count is as 1 leaf), and all of its ancetsors.
+# If the CHEBI_Id is a leaf, we include it (and count it as 1 leaf), and all of its ancestors.
 # If the CHEBI_Id is not a leaf, we include all of its leaf descendants, and all of its ancestors.
 
 
@@ -81,14 +81,6 @@ def gather_narrow_leaves(
     """
 
     print(f"Taxon: {taxon_label or '(unspecified)'}")
-
-    # Reuse cached leaves when available.
-    # if os.path.exists(output_json):
-    # with open(output_json, "r", encoding="utf-8") as f:
-    #  cached = json.load(f)
-    # leaves = set(cached.get("narrow_leaves", []))
-    # print(f"Loaded {len(leaves)} narrow leaves from {output_json}")
-    # return leaves
 
     print(f"Building narrow leaves cache from {compounds_tsv}...")
     print(f"Using leaf membership from {leaves_csv}")

@@ -55,12 +55,6 @@ def build_class_to_leaf_map(
         for ancestor in ancestors:
             class_to_leaves[ancestor].add(leaf)
 
-    ### Include if I also want leaf classes to appear in the map. Now these will give the same output as something not in the ontology at all.
-    # # Ensure all leaf classes appear with empty lists
-    # for leaf in all_leaf_classes:
-    #     if leaf not in class_to_leaves:
-    #         class_to_leaves[leaf] = set()
-
     # Convert sets to lists for JSON serialization
     class_to_leaf_json = {cls: list(leaves) for cls, leaves in class_to_leaves.items()}
 
@@ -130,25 +124,6 @@ def count_removed_classes_for_class(
     else:
         raise ValueError("Functional classification is not yet implemented.")
 
-    # if classification in ["functional", "full"]:
-    #     # Get ALL roles for the class being tested (direct + inherited from ancestors)
-    #     all_roles = class_to_all_roles_map.get(class_iri, [])
-
-    #     if all_roles:
-    #         # Collect all leaves associated with those roles
-    #         leaves_role = set()
-    #         for role in all_roles:
-    #             leaves_role.update(roles_to_leaves_map.get(role, []))
-    #             if role not in roles_to_leaves_map:
-    #                 print(f"⚠️ Role {role} has no associated leaves in roles_to_leaves_map.")
-    #             print(f"Role {role} has {len(roles_to_leaves_map.get(role, []))} associated leaves.")
-    #         leaves.update(leaves_role)
-
-    #         print(f"Class {class_iri} has {len(leaves_role)} functional leaf descendants from roles.")
-    #         print(f"Class {class_iri} has {len(all_roles)} roles.")
-    #     else:
-    #         print(f"⚠️ Class {class_iri} has no associated roles in class_to_all_roles_map.")
-
     n_leaves = len(leaves)
 
     return leaves, n_leaves
@@ -192,7 +167,7 @@ if __name__ == "__main__":
     the file with the class to leaf descendants map must be created first.
     This is done in "build_class_to_leaf_map" task. """
 
-    task = "other"
+    task = "count_removed_classes_for_class"
     # Options: "count_total_removed_leaves" "count_removed_classes_for_class" "build_class_to_leaf_map" "enrichment_analysis_plain"
 
     # Variables used in "count_removed_classes_for_class":
@@ -208,8 +183,6 @@ if __name__ == "__main__":
     classification = "structural"  # "functional" or "structural" or "full"
     check_leaf_classes = True  # Checks that the found the leaf classes are of the exppected type (Functional or Structural)
     class_iri = "http://purl.obolibrary.org/obo/CHEBI_83822"
-    # Not found in map: "http://purl.obolibrary.org/obo/CHEBI_38870"
-    # Children for "http://purl.obolibrary.org/obo/CHEBI_38867" are not found in the csv but are found in map
 
     # Files
     removed_leaves_csv = "data/removed_leaf_classes_with_smiles.csv"
@@ -235,9 +208,11 @@ if __name__ == "__main__":
         # - Total number of removed functional leaf classes: 41
 
     elif task == "count_removed_classes_for_class":
+        with open(map_file) as f:
+            class_to_leaf_map = json.load(f)
         subclasses, n_subclasses = count_removed_classes_for_class(
             class_iri,
-            map_file,
+            class_to_leaf_map,
             classification,
             class_to_all_roles_map,
             roles_to_leaves_map,

@@ -8,6 +8,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-09
+
 ### Added
 
 - The graph page has a controls panel sitting on the canvas itself, so hiding
@@ -69,6 +71,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Renamed the module `chebin.calculations.visualitations_and_pruning` to
+  `chebin.calculations.visualizations_and_pruning` to fix its spelling. Code
+  that imports from the old module path must be updated; the top-level `chebin`
+  imports are unaffected. Its function `graph_to_cytospace_json` is likewise
+  renamed to `graph_to_cytoscape_json`.
 - The graph's node tooltip no longer uses qTip2. The `cytoscape-qtip` extension
   binds `hide.event` as a Cytoscape event and calls `qtipApi.hide()` itself, so
   qTip2's own `hide.fixed` and `hide.delay` never ran: the tooltip closed the
@@ -194,5 +201,6 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 --------------------------------------------------------------------------------
 
-[Unreleased]: https://github.com/Adafede/chebin/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ontology-tools/chebin/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ontology-tools/chebin/compare/v1.0.1...v1.1.0
 [0.1.0]: https://github.com/Adafede/chebin/releases/tag/v0.1.0

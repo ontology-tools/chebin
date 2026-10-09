@@ -16,7 +16,7 @@ from chebin.calculations.fishers_calculations import (
 )
 from chebin.calculations.predicted_parents import LEAF_EXPANSION_LIMIT
 from chebin.calculations.smiles_lookup import convert_smiles_to_chebi, is_smiles
-from chebin.calculations.visualitations_and_pruning import graph_to_cytospace_json
+from chebin.calculations.visualizations_and_pruning import graph_to_cytoscape_json
 from chebin.calculations.weighted_calculations import (
     run_weighted_enrichment_analysis,
     run_weighted_enrichment_analysis_plain_enrich_pruning_strategy,
@@ -430,7 +430,7 @@ def run_analysis():
                 )
             # Save JSON representation of pruned_G in session for graph visualization
             graph_json_file = f"website/static/data/graph_{session['session_id']}.json"
-            graph_to_cytospace_json(pruned_G, graph_json_file, results)
+            graph_to_cytoscape_json(pruned_G, graph_json_file, results)
             session["graph_file"] = f"graph_{session['session_id']}.json"
 
             session["pruning"] = {
@@ -476,7 +476,7 @@ def run_analysis():
                 )
 
             graph_json_file = f"website/static/data/graph_{session['session_id']}.json"
-            graph_to_cytospace_json(pruned_G, graph_json_file, results)
+            graph_to_cytoscape_json(pruned_G, graph_json_file, results)
             session["graph_file"] = f"graph_{session['session_id']}.json"
 
             session["pruning"] = {
@@ -591,7 +591,7 @@ def run_analysis():
 
     # Save JSON representation of pruned_G in session for graph visualization
     graph_json_file = f"website/static/data/graph_{session['session_id']}.json"
-    graph_to_cytospace_json(pruned_G, graph_json_file, results)
+    graph_to_cytoscape_json(pruned_G, graph_json_file, results)
     session["graph_file"] = f"graph_{session['session_id']}.json"
 
     session["pruning"] = {
