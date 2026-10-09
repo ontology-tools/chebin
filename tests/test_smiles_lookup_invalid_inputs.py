@@ -20,6 +20,8 @@ INVALID_SMILES = "CCO=OOOO"
 # Valid, and absent from the local lookup tables, so resolving it needs the API.
 VALID_REMOTE_SMILES = "CCOC(=O)CCCCCCN1CCCC1"
 
+pytestmark = pytest.mark.usefixtures("empty_local_maps")
+
 
 @pytest.fixture
 def no_network(monkeypatch):

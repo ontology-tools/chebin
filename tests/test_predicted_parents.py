@@ -19,6 +19,8 @@ from chebin.calculations.predicted_parents import (
 IRI = "http://purl.obolibrary.org/obo/CHEBI_"
 VALID_REMOTE_SMILES = "CCOC(=O)CCCCCCN1CCCC1"
 
+pytestmark = pytest.mark.usefixtures("empty_local_maps")
+
 
 @pytest.fixture(autouse=True)
 def toy_hierarchy(monkeypatch):

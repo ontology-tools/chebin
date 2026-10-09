@@ -17,6 +17,8 @@ from chebin.calculations import smiles_lookup
 
 WEBSITE_DIR = Path(__file__).resolve().parents[1] / "website"
 
+pytestmark = pytest.mark.usefixtures("empty_local_maps")
+
 
 @pytest.fixture(scope="module")
 def website_app():
